@@ -5,6 +5,7 @@ import base64
 import io
 import plotly.express as px
 
+
 # Initialize the app
 app = Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP], suppress_callback_exceptions=True)
 app.title = "Excel Upload Dashboard"
@@ -18,10 +19,17 @@ dark_layout = {
     'colorway': ['#636EFA', '#EF553B', '#00CC96', '#AB63A1'],  # Default color palette
 }
 
-# Sidebar layout
 sidebar = html.Div(
     [
-        html.H2("Navigation", className="text-light text-center"),
+        html.Img(
+            src = "assets/MS solutions.jpeg",  # Replace "logo.png" with your image name
+            alt="Logo",
+            style={
+                "width": "150px",  # Adjust width of the logo as needed
+                "margin": "0 auto",  # Center the logo horizontally
+                "display": "block",  # Ensure the image is treated as a block element
+            },
+        ),
         html.Hr(),
         dbc.Nav(
             [
@@ -44,11 +52,11 @@ sidebar = html.Div(
         "transition": "width 0.3s ease",  # Smooth transition for the width change
         "display": "flex",
         "flexDirection": "column",
-        "flex-align": "center",
-        "justify-content": "center",
-        "align-items": "center",
+        "alignItems": "center",  # Align items in the center
+        "justifyContent": "start",  # Align content at the start
     },
 )
+
 
 # Sidebar Toggle Button
 toggle_button = html.Button(
@@ -330,9 +338,9 @@ def toggle_sidebar(n_clicks, current_state):
         # Close the sidebar (make it disappear, but keep a small width for the button)
         return (
             {"backgroundColor": "#343a40", "padding-top": "20px", "height": "100vh", "width": "0px", "position": "fixed", "overflow": "hidden"},
-            {"marginLeft": "30px", "padding-top": "20px", "backgroundColor": "#1e1e1e", "minHeight": "100vh", "color": "white"},
+            {"marginLeft": "20px", "padding-top": "20px", "backgroundColor": "#1e1e1e", "minHeight": "100vh", "color": "white"},
             ">",  # Change button to ">"
-            {"position": "absolute", "top": "50%", "left": "10px", "backgroundColor": "transparent", "color": "black", "border": "none", "padding": "0px", "cursor": "pointer", "fontSize": "20px", "zIndex": "1000"},
+            {"position": "absolute", "top": "50%", "left": "5px", "backgroundColor": "transparent", "color": "black", "border": "none", "padding": "0px", "cursor": "pointer", "fontSize": "20px", "zIndex": "1000"},
             "closed"  # Update sidebar state to closed
         )
     else:
@@ -357,4 +365,4 @@ def toggle_sidebar(n_clicks, current_state):
 
 # Run the app
 if __name__ == "__main__":
-    app.run_server(debug=True)
+    app.run_server(debug=False)
