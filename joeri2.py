@@ -22,7 +22,7 @@ dark_layout = {
 sidebar = html.Div(
     [
         html.Img(
-            src = "assets/MS solutions.jpeg",  # Replace "logo.png" with your image name
+            src = "assets/MS solutions wit.png",  # Replace "logo.png" with your image name
             alt="Logo",
             style={
                 "width": "150px",  # Adjust width of the logo as needed
