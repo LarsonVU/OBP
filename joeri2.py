@@ -4,6 +4,7 @@ import pandas as pd
 import base64
 import io
 import plotly.express as px
+import ilp_algorithm as ilp
 
 
 # Initialize the app
@@ -226,9 +227,9 @@ def algorithm_settings_layout():
                 [
                     dbc.Col(
                         [
-                            html.Label("Parameter 1:", className="mt-2"),
+                            html.Label("Max Runtime:", className="mt-2"),
                             dcc.Input(
-                                id="param-1",
+                                id="max-runtime",
                                 type="number",
                                 placeholder="Enter value",
                                 className="form-control",
@@ -254,6 +255,7 @@ def algorithm_settings_layout():
             html.Div(id="algorithm-output", className="mt-3"),
         ]
     )
+
 
 # Graphs Section Layout
 def graphs_layout():

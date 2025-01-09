@@ -21,7 +21,7 @@ def readInput(excel_file_path):
     data = pd.read_excel(excel_file_path)
     return data
 
-def runAlgorithm(data):
+def runAlgorithm(data, max_runtime):
     '''
     An ILP algorithm that uses gurobi to solve the permutation flowshop scheduling
     problem with release dates and total weighted tardiness as a objective function
@@ -93,7 +93,7 @@ def runAlgorithm(data):
     model.addConstrs((x[i, j] + x[j, i] == 1 for i in job_ids for j in job_ids if i != j), name = "MutualExclusion")
 
     # Set timelimit parameter
-    model.Params.TimeLimit = 30.0
+    model.Params.TimeLimit = max_runtime
 
     # Find schedule
     model.optimize()
@@ -121,7 +121,8 @@ def runAlgorithm(data):
 
 # Example usage
 data = readInput('OBP/job_data3.xlsx')
-schedule, score, runtime = runAlgorithm(data)
+MAX_RUNTIME = 100
+schedule, score, runtime = runAlgorithm(data, MAX_RUNTIME)
 print("Schedule:\n", schedule)
 print("Score:", score)
 print("Runtime:", runtime)
