@@ -93,17 +93,26 @@ def runAlgorithm(data):
     model.addConstrs((x[i, j] + x[j, i] == 1 for i in job_ids for j in job_ids if i != j), name = "MutualExclusion")
 
     # Set timelimit parameter
-    model.Params.TimeLimit = 100.0
+    model.Params.TimeLimit = 30.0
 
     # Find schedule
     model.optimize()
 
     # Output results
     if model.status == GRB.OPTIMAL or model.status == GRB.TIME_LIMIT:
-        schedule = np.zeros((num_jobs, num_machines))
+        columns = ['Job ID']
+        for i in range(len(machines)):
+            columns = columns + [f'Start time machine {i+1}', f'Completion time machine {i+1}' ]
+        schedule = pd.DataFrame(columns=columns)
+
         for j in job_ids:
+            job_schedule = [j]
+
             for k in machines:
-                schedule[j - 1, k - 1] = C[j, k].X
+                job_schedule = job_schedule + [C[j, k].X - processing_times[j - 1, k-1] , C[j, k].X]
+
+            schedule.loc[len(schedule)] = job_schedule
+
         score = model.objVal
         return schedule, score, model.Runtime
     else:
