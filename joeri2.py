@@ -166,7 +166,13 @@ def display_table(contents, filename):
         if filename.endswith('.xlsx'):
             # Read the Excel file
             df = pd.read_excel(io.BytesIO(decoded))
-            df = df.set_axis(['Job ID', 'Release Date', 'Due Date', 'Weight', 'Process time 1', 'Process time 2', 'Process time 3'], axis=1)
+
+            if len(df.columns) > 5:
+                process_time_titles = [f"Process time {i+1}" for i in range(len(df.columns )-4)]
+            else:
+                return html.Div("Unsupported file type. Please upload an Excel file with service times dedicated to each machine")
+            titles = ['Job ID', 'Release Date', 'Due Date', 'Weight'] +process_time_titles
+            df = df.set_axis(titles, axis=1)
 
             # Store the data in a global variable for graph updates
             app.layout.df = df  # Store the dataframe in the app layout
