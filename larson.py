@@ -199,11 +199,21 @@ def display_table(contents, filename):
                     editable=True,
                     row_deletable=True
                 ),
-            ])
+            html.Div('None', id = 'placeholder')])
         else:
             return html.Div("Unsupported file type. Please upload an Excel file.")
     except Exception as e:
         return html.Div(f"There was an error processing the file: {str(e)}")
+
+
+@app.callback(
+    Output('placeholder', 'children'),
+    Input('sortable-table', 'data'),
+    State('sortable-table', 'columns'),
+    prevent_initial_call = True)
+def update_input_data(rows, columns):
+    app.layout.df = pd.DataFrame(rows, columns=[col['name'] for col in columns]).astype(int)
+    return 'hoi'
 
 @app.callback(Output('sortable-table', 'data', allow_duplicate=True),
     Input('add-row-btn', 'n_clicks'),
@@ -214,9 +224,9 @@ def display_table(contents, filename):
 def add_row(n_clicks, rows, columns):
     if rows is None:
         rows = []
-    new_row = {col['id']: '' for col in columns}  # Create an empty row
+    new_row = {col['id']: 0 for col in columns}  # Create an empty row
     rows.append(new_row)  # Append the new row
-    app.layout.df = pd.DataFrame(rows, columns= columns)
+
     return rows
 
 # Algorithm Settings Section Layout
@@ -296,68 +306,45 @@ def graphs_layout():
                     "color": "white",
                 },
                 style_cell={"textAlign": "center", "padding": "5px"},
-            ) 
-    else :
-        schedule = html.H3("The schedule will be displayed here")
+            )
+        
+        score, runtime = app.layout.schedule_stats
 
-
-    # Ensure that df is available (if the file has been uploaded)
-    df = getattr(app.layout, 'df', None)
-    if df is not None:
-        # Create the graphs based on the uploaded data
-        graph1 = dcc.Graph(
-            figure=px.scatter(
-                df, x="Weight", y="Process time 1", color="Job ID", title="Weight vs Process Time 1"
-            ).update_layout(dark_layout),
-            config={"displayModeBar": False},
-        )
-
-        graph2 = dcc.Graph(
-            figure=px.scatter(
-                df, x="Weight", y="Process time 2", color="Job ID", title="Weight vs Process Time 2"
-            ).update_layout(dark_layout),
-            config={"displayModeBar": False},
-        )
-
-        graph3 = dcc.Graph(
-            figure=px.scatter(
-                df, x="Process time 1", y="Process time 2", color="Job ID", title="Process Time 1 vs Process Time 2"
-            ).update_layout(dark_layout),
-            config={"displayModeBar": False},
-        )
-
-        graph4 = dcc.Graph(
-            figure=px.scatter(
-                df, x="Process time 2", y="Process time 3", color="Job ID", title="Process Time 2 vs Process Time 3"
-            ).update_layout(dark_layout),
-            config={"displayModeBar": False},
-        )
-  
-
+        display_runtime = html.Div([html.Label("Runtime of the algorithm", className="mt-2"), f"{runtime}"])
+        display_score = html.Div([html.Label("Score of the algorithm", className="mt-2"), f"{score}"])
         return html.Div(
             [
                 html.H3("Graphs Section", className="text-center"),
                 dbc.Row(
                     [
-                        dbc.Col(graph1, width=6),
-                        dbc.Col(graph2, width=6),
-                    ]
-                ),
-                dbc.Row(
-                    [
-                        dbc.Col(graph3, width=6),
-                        dbc.Col(graph4, width=6),
-                    ]
-                ),
-                dbc.Row(
-                    [
                         dbc.Col(schedule, width=12),
+                    ]
+                ),
+                dbc.Row(
+                    [
+                        dbc.Col(display_runtime, width=6),
+                        dbc.Col(display_score, width= 6)
                     ]
                 ),
             ]
         )
     else:
-        return html.Div("No data uploaded. Please upload a file first.")
+        return html.H3("The schedule will be displayed here")
+
+
+
+    # Ensure that df is available (if the file has been uploaded)
+    # df = getattr(app.layout, 'df', None)
+    # if df is not None:
+    #     # Create the graphs based on the uploaded data
+    #     graph1 = dcc.Graph(
+    #         figure=px.scatter(
+    #             df, x="Weight", y="Process time 1", color="Job ID", title="Weight vs Process Time 1"
+    #         ).update_layout(dark_layout),
+    #         config={"displayModeBar": False},
+    #     )
+
+
 
 
 @app.callback(
