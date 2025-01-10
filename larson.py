@@ -4,7 +4,7 @@ import pandas as pd
 import base64
 import io
 import plotly.express as px
-import OBP.ilp_algorithm as ilp
+import ilp_algorithm as ilp
 
 
 # Initialize the app
@@ -310,8 +310,11 @@ def graphs_layout():
         
         score, runtime = app.layout.schedule_stats
 
-        display_runtime = html.Div([html.Label("Runtime of the algorithm", className="mt-2"), f"{runtime}"])
-        display_score = html.Div([html.Label("Score of the algorithm", className="mt-2"), f"{score}"])
+        display_runtime = html.Div([dbc.Row(html.Label("Runtime of the algorithm", className="mt-2")),
+                                    dbc.Row(f"{runtime}")])
+        display_score = html.Div([dbc.Row(html.Label("Score of the algorithm", className="mt-2")),
+                                    dbc.Row(f"{score}")])
+        
         return html.Div(
             [
                 html.H3("Graphs Section", className="text-center"),
