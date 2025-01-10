@@ -2,8 +2,8 @@ import pandas as pd
 import random
 
 # Configuration variables
-output_file = "OBP/job_data3.xlsx"
-number_of_jobs = 19
+output_file = "OBP/job_data4.xlsx"
+number_of_jobs = 200
 releases_date_range = 8
 due_date_range = 15
 service_times_max = 5
