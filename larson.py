@@ -5,7 +5,8 @@ import base64
 import io
 import plotly.express as px
 import ilp_algorithm as ilp
-
+import plotly.graph_objects as go
+from plotly.colors import n_colors
 
 # Initialize the app
 app = Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP], suppress_callback_exceptions=True)
@@ -286,6 +287,54 @@ def run_specified_algorithm(n_clicks, max_runtime):
     return f"Finished"
 
 
+def create_gannt_chart(schedule_df):
+    fig = go.Figure()
+
+    machines = int((len(schedule_df.columns)-1)/2)
+    color_scheme = n_colors('rgb(234, 106, 71)', 'rgb(0, 145, 213)', len(schedule_df), colortype='rgb')
+    app.layout.df = app.layout.df.sort_values(by = 'Release Date')
+    job_ids = app.layout.df['Job ID'].tolist()
+    job_colors = {job_id: color for job_id, color in zip(job_ids, color_scheme)}
+
+    for index, row in schedule_df.iterrows():
+        for m in range(machines):
+            fig.add_trace(go.Bar(
+                x=[row[f'Completion time machine {m+1}'] - row[f'Start time machine {m+1}']],
+                y=[m+1],
+                base=row[f'Start time machine {m+1}'],
+                orientation='h',
+                name=row['Job ID'],
+                marker_color = job_colors[row['Job ID']],
+                showlegend= False
+            ))
+
+    for job_id, color in job_colors.items():
+        fig.add_trace(go.Scatter(
+            x=[None], y=[None],
+            mode='markers',
+            marker=dict(size=10, color=color),
+            name=job_id
+        ))
+
+    fig.update_layout(
+        title="Job Schedule for Machines",
+        xaxis_title="Time",
+        yaxis_title="Machine",
+        barmode='stack',
+        xaxis=dict(
+            fixedrange=True  # Disable zooming
+        ),
+        yaxis=dict(
+            tickmode='linear',
+            tick0=1,
+            dtick=1,
+            fixedrange=True  # Disable panning/zooming
+        ),
+        showlegend=True,
+    )
+    return fig
+
+
 # Graphs Section Layout
 def graphs_layout():
 
@@ -314,7 +363,10 @@ def graphs_layout():
                                     dbc.Row(f"{runtime}")])
         display_score = html.Div([dbc.Row(html.Label("Score of the algorithm", className="mt-2")),
                                     dbc.Row(f"{score}")])
-        
+        schedule_graph = dcc.Graph(
+            figure= create_gannt_chart(schedule_data), config={'staticPlot': True}
+        )
+
         return html.Div(
             [
                 html.H3("Graphs Section", className="text-center"),
@@ -329,24 +381,15 @@ def graphs_layout():
                         dbc.Col(display_score, width= 6)
                     ]
                 ),
+                dbc.Row(
+                    [
+                        dbc.Col(schedule_graph, width=12),
+                    ]
+                )
             ]
         )
     else:
         return html.H3("The schedule will be displayed here")
-
-
-
-    # Ensure that df is available (if the file has been uploaded)
-    # df = getattr(app.layout, 'df', None)
-    # if df is not None:
-    #     # Create the graphs based on the uploaded data
-    #     graph1 = dcc.Graph(
-    #         figure=px.scatter(
-    #             df, x="Weight", y="Process time 1", color="Job ID", title="Weight vs Process Time 1"
-    #         ).update_layout(dark_layout),
-    #         config={"displayModeBar": False},
-    #     )
-
 
 
 
