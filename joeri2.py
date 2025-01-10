@@ -4,7 +4,7 @@ import pandas as pd
 import base64
 import io
 import plotly.express as px
-import ilp_algorithm as ilp
+# import ilp_algorithm as ilp
 
 
 # Initialize the app
@@ -346,7 +346,7 @@ def toggle_sidebar(n_clicks, current_state):
         # Close the sidebar (make it disappear, but keep a small width for the button)
         return (
             {"backgroundColor": "#343a40", "padding-top": "20px", "height": "100vh", "width": "0px", "position": "fixed", "overflow": "hidden"},
-            {"marginLeft": "20px", "padding-top": "20px", "backgroundColor": "#1e1e1e", "minHeight": "100vh", "color": "white"},
+            {"marginLeft": "20px", "padding-top": "20px","padding-left": "20px", "backgroundColor": "#1e1e1e", "minHeight": "100vh", "color": "white"},
             ">",  # Change button to ">"
             {"position": "absolute", "top": "50%", "left": "5px", "backgroundColor": "transparent", "color": "black", "border": "none", "padding": "0px", "cursor": "pointer", "fontSize": "20px", "zIndex": "1000"},
             "closed"  # Update sidebar state to closed
