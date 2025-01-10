@@ -52,6 +52,7 @@ header = html.Div(
                 "position": "fixed",
                 "width": "100%",
                 "zIndex": 1,
+                "borderBottom": "1px solid #fff",
             },
         )
 
@@ -60,9 +61,9 @@ sidebar = html.Div(
         html.Hr(),
         dbc.Nav(
             [
-                dbc.NavLink("File Input", href="/file-input", active="exact"),
-                dbc.NavLink("Algorithm Settings", href="/algorithm-settings", active="exact"),
-                dbc.NavLink("Graphs Section", href="/graphs", active="exact"),
+                dbc.NavLink("File Input", href="/file-input", active="exact", style={"color": "#FFF"}),  # Change the color here
+                dbc.NavLink("Algorithm Settings", href="/algorithm-settings", active="exact", style={"color": "#FFF"}),
+                dbc.NavLink("Graphs Section", href="/graphs", active="exact", style={"color": "#FFF"}),
             ],
             vertical=True,
             pills=True,
@@ -77,6 +78,7 @@ sidebar = html.Div(
             "width": "0px", 
             "position": "fixed", 
             "overflow": "hidden",
+            "color": "white",
     },
 )
 
@@ -194,7 +196,7 @@ def display_table(contents, filename):
     if contents is None:
         # If no file is uploaded, keep button hidden and display placeholder text
         return html.Div(
-            "The presented jobs will be displayed here", 
+            "", 
             style={'textAlign': 'center', 'font-family': 'Roboto'}
         ), {"display": "none"}
 
@@ -222,7 +224,28 @@ def display_table(contents, filename):
 
             # Return the data table and make the button visible
             return html.Div([
-                html.H3(f"Uploaded File: {filename}", style={'textAlign': 'center', 'font-family': 'Roboto'}),
+                dcc.Link(
+                    html.Button(
+                        "Submit Data",
+                        id="submit-data-btn",
+                        style={
+                            "margin": "20px auto",
+                            "backgroundColor": "#1C4E80",  # Button background color
+                            "color": "#FFFFFF",  # Button text color
+                            "border": "none",  # No border
+                            "padding": "10px 20px",  # Padding inside the button
+                            "borderRadius": "5px",  # Rounded corners
+                            "fontSize": "16px",  # Font size
+                            "fontWeight": "bold",  # Bold text
+                            "fontFamily": "montserrat, sans-serif",  # Font family
+                            "cursor": "pointer",  # Pointer cursor on hover
+                            "transition": "background-color 0.3s ease",  # Smooth hover transition
+                        }
+                    ),
+                    href="/algorithm-settings",  # Link to the algorithm settings page
+                    style={"textAlign": "center", "display": "block"}
+                ),
+
                 dash_table.DataTable(
                     id="sortable-table",
                     columns=[{"name": col, "id": col, "deletable": False} for col in df.columns],
