@@ -335,8 +335,7 @@ def algorithm_settings_layout():
                 ]
             ),
             dbc.Button("Run Algorithm", id='run-btn', color="primary", className="mt-3", n_clicks= 0),
-            html.Div(id="algorithm-output", className="mt-3"),
-        ]
+            html.Div([dbc.Button("Download Solution", id="btn-algorithm-output", className="mt-3", style={"display": "none"}), dcc.Download(id="schedule-excel")]) ]
     )
 
 @app.callback(Output('param-2', 'children'),
@@ -347,6 +346,7 @@ def is_algorithm_running(n_clicks):
 
 @app.callback(  
         Output('param-2', 'children', allow_duplicate=True),
+        Output('btn-algorithm-output', 'style'),
         Input('run-btn', 'n_clicks'),
         State('max-runtime', 'value'),
         prevent_initial_call=True
@@ -360,7 +360,16 @@ def run_specified_algorithm(n_clicks, max_runtime):
     app.layout.schedule_df = schedule
     app.layout.schedule_stats = (score, runtime)
 
-    return f"Finished"
+    return f"Finished", {"display": "block"}
+
+@app.callback(
+        Output('schedule-excel', 'data'),
+        Input('btn-algorithm-output', 'n_clicks'),
+        prevent_initial_call = True
+)
+def download_schedule(n_clicks):
+    return dcc.send_data_frame(app.layout.schedule_df.to_excel, "schedule.xlsx", sheet_name="schedule")
+
 
 
 def create_gannt_chart(schedule_df):
