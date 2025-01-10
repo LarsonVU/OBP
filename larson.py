@@ -4,7 +4,7 @@ import pandas as pd
 import base64
 import io
 import plotly.express as px
-import ilp_algorithm_no_call as ilp
+import OBP.ilp_algorithm as ilp
 
 
 # Initialize the app

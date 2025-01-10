@@ -3,12 +3,12 @@ import random
 
 # Configuration variables
 output_file = "OBP/job_data3.xlsx"
-number_of_jobs = 19
+number_of_jobs = 100
 releases_date_range = 8
 due_date_range = 15
 service_times_max = 5
 weight_max = 10
-num_machines = 4  # Number of random integers (service times) per job
+num_machines = 4 # Number of random integers (service times) per job
 
 # Generate sample data
 data = []
