@@ -14,14 +14,6 @@ from plotly.colors import n_colors
 app = Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP], suppress_callback_exceptions=True)
 app.title = "Excel Upload Dashboard"
 
-dark_layout = {
-    'plot_bgcolor': '#1e1e1e',  # Dark background for the plot
-    'paper_bgcolor': '#1e1e1e',  # Dark background for the whole page
-    'font': {'color': 'white'},   # White text
-    'xaxis': {'showgrid': False},  # Hide the grid
-    'yaxis': {'showgrid': False},  # Hide the grid
-    'colorway': ['#636EFA', '#EF553B', '#00CC96', '#AB63A1'],  # Default color palette
-}
 
 table_layout = {
     "style_table": {
@@ -35,7 +27,7 @@ table_layout = {
         "color": "#F1F1F1",  # Light text
         "fontWeight": "bold",
         "textAlign": "left",
-        "border": "1px solid #EA6A47",  # Orange border
+        "border": "1px solid #7E909A",  # Orange border
     },
     "style_cell": {
         "backgroundColor": "#F1F1F1",  # Light background
@@ -59,6 +51,24 @@ table_layout = {
         },
     ],
 }
+
+
+
+
+button_style1 = { "style" : {
+                            "margin": "20px auto",
+                            "backgroundColor": "#1C4E80",  # Button background color
+                            "color": "#FFFFFF",  # Button text color
+                            "border": "none",  # No border
+                            "padding": "10px 20px",  # Padding inside the button
+                            "borderRadius": "5px",  # Rounded corners
+                            "fontSize": "16px",  # Font size
+                            "fontWeight": "bold",  # Bold text
+                            "fontFamily": "montserrat, sans-serif",  # Font family
+                            "cursor": "pointer",  # Pointer cursor on hover
+                            "transition": "background-color 0.3s ease",  # Smooth hover transition
+                        }} 
+
 
 header = html.Div(
             [
@@ -128,7 +138,7 @@ content = html.Div(
         "backgroundColor": "#F1F1F1",
         "fontFamily": "montserrat, sans-serif",
         "minHeight": "100vh",
-        "color": "white",
+        "color": "black",
     },
 )
 
@@ -295,22 +305,10 @@ def display_table(contents, filename):
             # Return the data table and make the button visible
             return html.Div([
                 dcc.Link(
-                    html.Button(
+                    dbc.Button(
                         "Submit Data",
                         id="submit-data-btn",
-                        style={
-                            "margin": "20px auto",
-                            "backgroundColor": "#1C4E80",  # Button background color
-                            "color": "#FFFFFF",  # Button text color
-                            "border": "none",  # No border
-                            "padding": "10px 20px",  # Padding inside the button
-                            "borderRadius": "5px",  # Rounded corners
-                            "fontSize": "16px",  # Font size
-                            "fontWeight": "bold",  # Bold text
-                            "fontFamily": "montserrat, sans-serif",  # Font family
-                            "cursor": "pointer",  # Pointer cursor on hover
-                            "transition": "background-color 0.3s ease",  # Smooth hover transition
-                        }
+                        **button_style1
                     ),
                     href="/algorithm-settings",  # Link to the algorithm settings page
                     style={"textAlign": "center", "display": "block"}
@@ -367,7 +365,6 @@ def add_row(n_clicks, rows, columns):
 
     return rows
 
-# Algorithm Settings Section Layout
 def algorithm_settings_layout():
     return html.Div(
         [
@@ -380,7 +377,7 @@ def algorithm_settings_layout():
                             dcc.Input(
                                 id="max-runtime",
                                 type="number",
-                                placeholder="Enter value",
+                                placeholder="Enter value (default 100)",
                                 className="form-control",
                             ),
                         ],
@@ -388,16 +385,46 @@ def algorithm_settings_layout():
                     ),
                     dbc.Col(
                         [
-                            html.Label("Algorithm-status", className="mt-2"),
-                            html.Div(f"Not running yet", id = 'param-2'),
+                            html.Label("Algorithm Status:", className="mt-2"),
+                            html.Div("Not running yet", id='param-2'),
                         ],
                         width=6,
                     ),
                 ]
             ),
-            dbc.Button("Run Algorithm", id='run-btn', color="primary", className="mt-3", n_clicks= 0),
-            html.Div([dbc.Button("Download Solution", id="btn-algorithm-output", className="mt-3", style={"display": "none"}), dcc.Download(id="schedule-excel")]) ]
+            dbc.Row(
+                [
+                    dbc.Col(
+                        dbc.Button("Run Algorithm", id='run-btn', color="primary", className="mt-3", n_clicks=0),
+                        width="auto"
+                    ),
+                    dbc.Col(
+                        html.Div(
+                            [
+                                dbc.Button("Download Solution", id="btn-algorithm-output", className="mt-3", style={"display": "none"}), 
+                                dcc.Download(id="schedule-excel"),
+                            ]
+                        ),
+                        width="auto"
+                    ),
+                    dbc.Col(
+                        dcc.Link(
+                            dbc.Button(
+                                "Show visualizations",
+                                id="show-vis-btn",
+                                    className="mt-3",
+                                    style={"textAlign": "center", "display": "none"}
+                            ),
+                            href="/graphs",  # Link to the algorithm settings page
+                        ),
+                        width="auto"
+                    ),
+                ]
+            )
+        ]
     )
+
+
 
 @app.callback(Output('param-2', 'children'),
               Input('run-btn', 'n_clicks'),
@@ -405,9 +432,22 @@ def algorithm_settings_layout():
 def is_algorithm_running(n_clicks):
     return f"Running"
 
+
+@app.callback(
+    Output('max-runtime', 'value'),
+    Input('run-btn', 'n_clicks'),
+    State('max-runtime', 'value'),
+    prevent_initial_call=True
+    )
+def enter_max_runtime_value(n_clicks, max_runtime):
+    if max_runtime is None:
+        max_runtime = 100
+    return max_runtime
+
 @app.callback(  
         Output('param-2', 'children', allow_duplicate=True),
         Output('btn-algorithm-output', 'style'),
+        Output('show-vis-btn', 'style'),
         Input('run-btn', 'n_clicks'),
         State('max-runtime', 'value'),
         prevent_initial_call=True
@@ -416,12 +456,16 @@ def run_specified_algorithm(n_clicks, max_runtime):
     data = app.layout.df.copy()
     columns = ['job_id', 'release_date', 'due_date', 'weight'] + [f"st_{i+1}" for i in range(len(data.columns)-4)]
     data.columns = columns
+
+    if max_runtime is None:
+        max_runtime = 100
+
     schedule, score, runtime = ilp.runAlgorithm(data, max_runtime)
 
     app.layout.schedule_df = schedule
     app.layout.schedule_stats = (score, runtime)
 
-    return f"Finished", {"display": "block"}
+    return f"Finished", {"display": "block"}, {"display": "block"}
 
 @app.callback(
         Output('schedule-excel', 'data'),
@@ -491,16 +535,7 @@ def graphs_layout():
                 columns=[{"name": col, "id": col, "deletable": False} for col in schedule_data.columns],
                 data=app.layout.schedule_df.to_dict("records"),
                 #sort_action="native",  # Enables sorting by clicking column headers
-                style_table={"overflowX": "auto"},
-                style_header={
-                    "backgroundColor": "rgb(130, 130, 230)",
-                    "fontWeight": "bold",
-                },
-                style_data={
-                    "backgroundColor": "black",  # Light gray background for rows
-                    "color": "white",
-                },
-                style_cell={"textAlign": "center", "padding": "5px"},
+                **table_layout
             )
         
         score, runtime = app.layout.schedule_stats
@@ -554,7 +589,7 @@ def toggle_sidebar(n_clicks, current_state):
         # Close the sidebar
         return (
             {"backgroundColor": "#1C4E80", "padding-top": "20px", "height": "100vh", "width": "0px", "position": "fixed", "overflow": "hidden"},
-            {"marginLeft": "0px", "padding-top": "100px", "backgroundColor": "#F1F1F1", "minHeight": "100vh", "color": "white"},
+            {"marginLeft": "0px", "padding-top": "100px", "backgroundColor": "#F1F1F1", "minHeight": "100vh", "color": "black"},
             "☰",  # Hamburger menu icon when sidebar is closed
             {"cursor": "pointer", "fontSize": "24px", "color": "white", "marginRight": "20px"},  # Hamburger menu style
             "closed"  # Update state to closed
@@ -572,7 +607,7 @@ def toggle_sidebar(n_clicks, current_state):
                 "display": "flex",
                 "flexDirection": "column",  # Stack items vertically
             },
-            {"marginLeft": "200px", "padding": "100px 10px", "backgroundColor": "#F1F1F1", "minHeight": "100vh", "color": "white"},
+            {"marginLeft": "200px", "padding": "100px 10px", "backgroundColor": "#F1F1F1", "minHeight": "100vh", "color": "black"},
             "×",  # Close icon when the sidebar is open
             {"cursor": "pointer", "fontSize": "26px", "lineheight": "1.2", "color": "white", "marginRight": "30px"},  # Hamburger menu style
             "open"  # Update state to open
