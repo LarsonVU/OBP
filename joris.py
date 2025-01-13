@@ -23,19 +23,21 @@ def readInput(excel_file_path):
 
 def runAlgorithm(data, max_runtime):
     '''
-    An ILP algorithm that uses Gurobi to solve the scheduling problem with machine-specific task ordering.
+    An ILP algorithm that uses gurobi to solve the permutation flowshop scheduling
+    problem with release dates and total weighted tardiness as an objective function.
 
     Input:
-    - data -> a pandas dataframe containing the following columns:
+    - data -> a pandas dataframe containing the following column (in order):
         - job_id
         - release_date
         - due_date
         - weight
         - st_1 <-> st_m (with m machines)
-    - max_runtime -> maximum runtime for the solver.
 
     Output:
-    - machine_schedules -> a dictionary containing the schedule for each machine.
+    - schedule -> the final schedule that the algorithm decided on
+    - score -> the score of the schedule
+    - runtime -> the runtime of the algorithm
     '''
 
     # Read the data from the dataframe
@@ -58,78 +60,75 @@ def runAlgorithm(data, max_runtime):
     # Initialize variables that indicate the completion time of a job j on machine k
     C = model.addVars(job_ids, machines, lb=0, vtype=GRB.CONTINUOUS, name="CompletionTime")
 
-    # Initialize variables that indicate the start time of a job j on machine k
-    S = model.addVars(job_ids, machines, lb=0, vtype=GRB.CONTINUOUS, name="StartTime")
+    # Initialize variables that indicate the tardiness of job j
+    T = model.addVars(job_ids, lb=0, vtype=GRB.CONTINUOUS, name="Tardiness")
 
-    # Initialize variables that indicate if job i precedes job j on machine k
-    x = model.addVars(job_ids, job_ids, machines, vtype=GRB.BINARY, name="Order")
+    # Initialize variables that indicate if job i is before job j in the order
+    x = model.addVars(job_ids, job_ids, vtype=GRB.BINARY, name="Order")
 
     # Set the objective to minimize the total weighted tardiness
-    T = model.addVars(job_ids, lb=0, vtype=GRB.CONTINUOUS, name="Tardiness")
-    model.setObjective(
-        sum(weights[j - 1] * T[j] for j in job_ids), 
-        GRB.MINIMIZE
-    )
+    model.setObjective(sum(weights[j - 1] * T[j] for j in job_ids), GRB.MINIMIZE)
 
-    # Add constraints for release dates
-    model.addConstrs((S[j, 1] >= release_dates[j - 1] for j in job_ids), name="ReleaseDateConstr")
+    # Add constraint that ensures that job j starts after its release date r_j
+    model.addConstrs((C[j, 1] >= release_dates[j - 1] + processing_times[j - 1, 0] for j in job_ids), name="ReleaseDateConstr")
 
-    # Add constraints for processing times and machine precedence
-    model.addConstrs((C[j, k] == S[j, k] + processing_times[j - 1, k - 1] for j in job_ids for k in machines), name="ProcessingTimeConstr")
-    model.addConstrs((S[j, k + 1] >= C[j, k] for j in job_ids for k in machines[:-1]), name="MachinePrecedenceConstr")
+    # Add constraint that ensures that job j on machine k (>= 2) starts after it has been processed on machine k - 1
+    model.addConstrs((C[j, k] >= C[j, k - 1] + processing_times[j - 1, k - 1]
+                      for j in job_ids for k in machines[1:]), name='MachinePrecedenceConstr')
 
-    # Add constraints for job ordering on each machine
-    M = np.sum(processing_times) + np.max(release_dates)  # A large constant
-    model.addConstrs((S[j, k] >= C[i, k] - M * (1 - x[i, j, k]) for i in job_ids for j in job_ids for k in machines if i != j), name="JobOrderConstr1")
-    model.addConstrs((S[i, k] >= C[j, k] - M * x[i, j, k] for i in job_ids for j in job_ids for k in machines if i != j), name="JobOrderConstr2")
+    # Calculate an upper bound
+    M = np.sum(processing_times) + np.max(release_dates)
 
-    # Add mutual exclusion constraints for job ordering
-    model.addConstrs((x[i, j, k] + x[j, i, k] == 1 for i in job_ids for j in job_ids for k in machines if i != j), name="MutualExclusion")
+    # Add constraint that ensures that if job j happens after job i its completion time is larger
+    model.addConstrs((C[j, k] >= C[i, k] + processing_times[j - 1, k - 1] * x[i, j] - M * (1 - x[i, j])
+                      for i in job_ids for j in job_ids for k in machines if i != j), name="JobOrderConstr")
 
-    # Add constraints to calculate tardiness
+    # Add constraint that calculates the tardiness
     model.addConstrs((T[j] >= C[j, num_machines] - due_dates[j - 1] for j in job_ids), name="TardinessConstr")
 
-    # Add precedence constraints to prioritize earlier jobs
-    model.addConstrs(
-        (S[i, 1] <= S[j, 1] for i, j in zip(job_ids[:-1], job_ids[1:]) if release_dates[i - 1] <= release_dates[j - 1]),
-        name="PrecedenceByReleaseDate"
-    )
+    # Add constraint that ensures that job j cannot happen before itself
+    model.addConstrs((x[j, j] == 0 for j in job_ids), name="NoSelfPrecedenceConstr")
 
-    # Set the time limit for optimization
+    # Add constraint that ensures that either job i happens before job j or vice versa if i!=j
+    model.addConstrs((x[i, j] + x[j, i] == 1 for i in job_ids for j in job_ids if i != j), name="MutualExclusion")
+
+    # Enforce logical ordering based on release dates
+    model.addConstrs((x[i, j] == 1 for i in job_ids for j in job_ids if release_dates[i - 1] < release_dates[j - 1]), name="LogicalOrder")
+
+    # Set time limit parameter
     model.Params.TimeLimit = max_runtime
 
-    # Optimize the model
+    # Find schedule
     model.optimize()
 
     # Output results
     if model.status == GRB.OPTIMAL or model.status == GRB.TIME_LIMIT:
-        machine_schedules = {}
-        for k in machines:
-            schedule = []
-            for j in job_ids:
-                start_time = S[j, k].X
-                completion_time = C[j, k].X
-                schedule.append((j, start_time, completion_time))
-            schedule.sort(key=lambda x: x[1])  # Sort by start time
-            machine_schedules[k] = schedule
+        columns = ['Job ID']
+        for i in range(len(machines)):
+            columns = columns + [f'Start time machine {i+1}', f'Completion time machine {i+1}']
+        schedule = pd.DataFrame(columns=columns)
 
-        return machine_schedules
+        for j in job_ids:
+            job_schedule = [j]
+
+            for k in machines:
+                job_schedule = job_schedule + [C[j, k].X - processing_times[j - 1, k-1], C[j, k].X]
+
+            schedule.loc[len(schedule)] = job_schedule
+
+        score = model.objVal
+        return schedule, score, model.Runtime
     else:
         print("No feasible solution found.")
-        return None
+        return None, None, None
+
 
 # Example usage
 if __name__ == "__main__":
-    # Input data
     data = readInput('data/job_data3.xlsx')
-
-    # Run the algorithm
+    print(data)
     MAX_RUNTIME = 10
-    machine_schedules = runAlgorithm(data, MAX_RUNTIME)
-
-    # Print the schedules
-    if machine_schedules:
-        for machine, schedule in machine_schedules.items():
-            print(f"Schedule for Machine {machine}:")
-            for job_id, start, complete in schedule:
-                print(f"  Job {job_id}: Start at {start:.2f}, Complete at {complete:.2f}")
+    schedule, score, runtime = runAlgorithm(data, MAX_RUNTIME)
+    print("Schedule:\n", schedule)
+    print("Score:", score)
+    print("Runtime:", runtime)
