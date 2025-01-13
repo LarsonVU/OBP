@@ -121,7 +121,8 @@ def runAlgorithm(data, max_runtime):
 
 # Example usage
 if __name__ == "__main__":
-    data = readInput('OBP/data/job_data3.xlsx')
+    data = readInput('data/job_data3.xlsx')
+    print(data)
     MAX_RUNTIME = 10
     schedule, score, runtime = runAlgorithm(data, MAX_RUNTIME)
     print("Schedule:\n", schedule)
