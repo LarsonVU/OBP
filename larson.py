@@ -23,6 +23,43 @@ dark_layout = {
     'colorway': ['#636EFA', '#EF553B', '#00CC96', '#AB63A1'],  # Default color palette
 }
 
+table_layout = {
+    "style_table": {
+        "width": "100%",
+        "overflowX": "auto",
+        "margin": "20px 0",
+        "borderRadius" : "10px",
+    },
+    "style_header": {
+        "backgroundColor": "#1C4E80",  # Dark blue
+        "color": "#F1F1F1",  # Light text
+        "fontWeight": "bold",
+        "textAlign": "left",
+        "border": "1px solid #EA6A47",  # Orange border
+    },
+    "style_cell": {
+        "backgroundColor": "#F1F1F1",  # Light background
+        "color": "#202020",  # Dark text
+        "textAlign": "left",
+        "padding": "10px",
+        "border": "1px solid #7E909A",  # Light border
+    },
+    "style_data": {
+        "border": "1px solid #7E909A",  # Border for data rows
+    },
+    "style_data_conditional": [
+        {
+            "if": {"row_index": "odd"},
+            "backgroundColor": "#A5D8DD",  # Subtle blue-green for alternate rows
+        },
+        {
+            "if": {"state": "active"},  # Hover effect
+            "backgroundColor": "#0091D5",  # Bright blue highlight
+            "color": "#F1F1F1",  # Light text
+        },
+    ],
+}
+
 header = html.Div(
             [
                 html.Div(
@@ -52,6 +89,7 @@ header = html.Div(
                 "position": "fixed",
                 "width": "100%",
                 "zIndex": 1,
+                "borderBottom": "1px solid #fff",
             },
         )
 
@@ -60,9 +98,9 @@ sidebar = html.Div(
         html.Hr(),
         dbc.Nav(
             [
-                dbc.NavLink("File Input", href="/file-input", active="exact"),
-                dbc.NavLink("Algorithm Settings", href="/algorithm-settings", active="exact"),
-                dbc.NavLink("Graphs Section", href="/graphs", active="exact"),
+                dbc.NavLink("File Input", href="/file-input", active="exact", style={"color": "#FFF"}, n_clicks= 0, id= "file-input"),  # Change the color here
+                dbc.NavLink("Algorithm Settings", href="/algorithm-settings", active="exact", style={"color": "#FFF"}),
+                dbc.NavLink("Graphs Section", href="/graphs", active="exact", style={"color": "#FFF"}),
             ],
             vertical=True,
             pills=True,
@@ -77,6 +115,7 @@ sidebar = html.Div(
             "width": "0px", 
             "position": "fixed", 
             "overflow": "hidden",
+            "color": "white",
     },
 )
 
@@ -120,6 +159,7 @@ def display_page(pathname):
     else:
         return file_input_layout()
 
+
 # File Input Section Layout (Updated with provided code)
 def file_input_layout():
     return html.Div(
@@ -146,7 +186,6 @@ def file_input_layout():
             ),
 
             html.Div(id='output-data-upload'),
-
             html.Button(
                 "Add Row",
                 id="add-row-btn",
@@ -164,8 +203,8 @@ def file_input_layout():
                     "cursor": "pointer",  # Pointer cursor on hover
                     "transition": "background-color 0.3s ease",  # Smooth hover transition
                 }
-            )
-        ],
+            ),
+        html.Div("", id = 'placeholder'),],
         style={  # Moved the style attribute here
             'backgroundColor': '#FFF',
             'padding': '30px 20px',
@@ -177,24 +216,57 @@ def file_input_layout():
         },
     )
 
+@app.callback(
+        Output('output-data-upload', 'children'),
+        Output('add-row-btn', 'style'),
+        Input("file-input", "n_clicks"),
+)
+def restore_data(n_clicks):
+    if n_clicks > 0 and app.layout.df is not None:
+        df = app.layout.df
+        return html.Div([
+            dash_table.DataTable(
+                id="sortable-table",
+                columns=[{"name": col, "id": col} for col in df.columns],
+                data=df.to_dict("records"),
+                sort_action="native",
+                editable=True,
+                row_deletable=True,
+                **table_layout
+            )
+        ]), {
+                    "display": "block",
+                    "margin": "20px auto",
+                    "backgroundColor": "#1C4E80",  # Button background color
+                    "color": "#F1F1F1",  # Button text color
+                    "border": "2px solid #7E909A",  # Border color
+                    "padding": "10px 20px",  # Padding inside the button
+                    "borderRadius": "8px",  # Rounded corners
+                    "fontSize": "16px",  # Font size
+                    "fontWeight": "bold",  # Bold text
+                    "cursor": "pointer",  # Pointer cursor on hover
+                    "transition": "background-color 0.3s ease",  # Smooth hover transition
+                }
+    return html.Div("", style={'textAlign': 'center', 'font-family': 'Roboto'}), {"display": "none"}
 
-# Callback to parse and display the uploaded file
-from dash import dcc, html, Input, Output, State, callback
+
+
 
 # Callback to parse and display the uploaded file
 @app.callback(
     [
-        Output('output-data-upload', 'children'),
-        Output('add-row-btn', 'style')  # Add output to modify button style
+        Output('output-data-upload', 'children', allow_duplicate=True),
+        Output('add-row-btn', 'style', allow_duplicate= True)  # Add output to modify button style
     ],
     Input('upload-data', 'contents'),
-    State('upload-data', 'filename')
+    State('upload-data', 'filename'),
+    prevent_initial_call = True
 )
 def display_table(contents, filename):
     if contents is None:
         # If no file is uploaded, keep button hidden and display placeholder text
         return html.Div(
-            "The presented jobs will be displayed here", 
+            "", 
             style={'textAlign': 'center', 'font-family': 'Roboto'}
         ), {"display": "none"}
 
@@ -222,24 +294,36 @@ def display_table(contents, filename):
 
             # Return the data table and make the button visible
             return html.Div([
-                html.H3(f"Uploaded File: {filename}", style={'textAlign': 'center', 'font-family': 'Roboto'}),
+                dcc.Link(
+                    html.Button(
+                        "Submit Data",
+                        id="submit-data-btn",
+                        style={
+                            "margin": "20px auto",
+                            "backgroundColor": "#1C4E80",  # Button background color
+                            "color": "#FFFFFF",  # Button text color
+                            "border": "none",  # No border
+                            "padding": "10px 20px",  # Padding inside the button
+                            "borderRadius": "5px",  # Rounded corners
+                            "fontSize": "16px",  # Font size
+                            "fontWeight": "bold",  # Bold text
+                            "fontFamily": "montserrat, sans-serif",  # Font family
+                            "cursor": "pointer",  # Pointer cursor on hover
+                            "transition": "background-color 0.3s ease",  # Smooth hover transition
+                        }
+                    ),
+                    href="/algorithm-settings",  # Link to the algorithm settings page
+                    style={"textAlign": "center", "display": "block"}
+                ),
+
                 dash_table.DataTable(
                     id="sortable-table",
                     columns=[{"name": col, "id": col, "deletable": False} for col in df.columns],
                     data=df.to_dict("records"),
                     sort_action="native",  # Enables sorting by clicking column headers
-                    style_table={"overflowX": "auto"},
-                    style_header={
-                        "backgroundColor": "rgb(130, 130, 230)",
-                        "fontWeight": "bold",
-                    },
-                    style_data={
-                        "backgroundColor": "black",  # Light gray background for rows
-                        "color": "white",
-                    },
-                    style_cell={"textAlign": "center", "padding": "5px"},
                     editable=True,
-                    row_deletable=True
+                    row_deletable=True,
+                    **table_layout
                 ),
             ]),  {   "display": "block",  # Initially hidden
                     "margin": "20px auto",
@@ -267,7 +351,7 @@ def display_table(contents, filename):
     prevent_initial_call = True)
 def update_input_data(rows, columns):
     app.layout.df = pd.DataFrame(rows, columns=[col['name'] for col in columns]).astype(int)
-    return 'hoi'
+    return ''#app.layout.df.iloc[-1]['Job ID']
 
 @app.callback(Output('sortable-table', 'data', allow_duplicate=True),
     Input('add-row-btn', 'n_clicks'),
@@ -346,6 +430,8 @@ def run_specified_algorithm(n_clicks, max_runtime):
 )
 def download_schedule(n_clicks):
     return dcc.send_data_frame(app.layout.schedule_df.to_excel, "schedule.xlsx", sheet_name="schedule")
+
+
 
 def create_gannt_chart(schedule_df):
     fig = go.Figure()
