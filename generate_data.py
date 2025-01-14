@@ -2,10 +2,11 @@ import pandas as pd
 import random
 
 # Configuration variables
-output_file = "OBP/data/job_data4.xlsx"
-number_of_jobs = 200
-releases_date_range = 8
-due_date_range = 15
+output_file = "data/job_data5.xlsx"
+number_of_jobs = 100
+releases_date_range = 100
+min_due_date_range = 200
+max_due_date_range = 500
 service_times_max = 5
 weight_max = 10
 num_machines = 4 # Number of random integers (service times) per job
@@ -15,7 +16,7 @@ data = []
 for i in range(number_of_jobs):
     job_id = i + 1
     release_date = random.randint(0, releases_date_range)  # Integer release date starting at 0
-    due_date = release_date + random.randint(1, due_date_range)  # Integer due date after release_date
+    due_date = release_date + random.randint(min_due_date_range, max_due_date_range)  # Integer due date after release_date
     weight = round(random.randint(1, weight_max), 1)  # Random weight between 1.0 and weight_max
     
     # Generate random service times based on the number of machines
