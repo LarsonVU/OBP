@@ -4,7 +4,7 @@ import pandas as pd
 import base64
 import io
 import plotly.express as px
-import ilp_algorithm as ilp
+import ilp_overtake as ilp
 import plotly.graph_objects as go
 from plotly.colors import n_colors
 
@@ -15,6 +15,8 @@ app = Dash(__name__, external_stylesheets=[
 app.title = "Excel Upload Dashboard"
 
 
+
+## Define styles for tables and buttons
 table_layout = {
     "style_table": {
         "width": "100%",
@@ -252,15 +254,7 @@ def restore_data(n_clicks):
                 row_deletable=True,
                 **table_layout
             )
-        ]), {  # Moved the style attribute here
-            'backgroundColor': '#FFF',
-            'padding': '30px 20px',
-            'color': 'black',
-            'display': 'flex',
-            'flexDirection': 'column',
-            'justifyContent': 'space-between',
-            'gap': '20px',
-        }
+        ]), button_style2["style"]
     return html.Div("", style={'textAlign': 'center', 'font-family': 'Roboto'}), {"display": "none"}
 
 
@@ -420,7 +414,8 @@ def algorithm_settings_layout():
                         width="auto"
                     ),
                 ]
-            )
+            ),
+            dbc.Row([dbc.Col(html.Div("", id='results-table') ,width =12)])
         ]
     )
 
@@ -448,6 +443,7 @@ def enter_max_runtime_value(n_clicks, max_runtime):
     Output('param-2', 'children', allow_duplicate=True),
     Output('btn-algorithm-output', 'style'),
     Output('show-vis-btn', 'style'),
+    Output('results-table', 'children'),
     Input('run-btn', 'n_clicks'),
     State('max-runtime', 'value'),
     prevent_initial_call=True
@@ -466,7 +462,16 @@ def run_specified_algorithm(n_clicks, max_runtime):
     app.layout.schedule_df = schedule
     app.layout.schedule_stats = (score, runtime)
 
-    return f"Finished", button_style1["style"], button_style1["style"]
+    schedule_table =  schedule = dash_table.DataTable(
+            id="schedule-table",
+            columns=[{"name": col, "id": col, "deletable": False}
+                     for col in app.layout.schedule_df.columns],
+            data=app.layout.schedule_df.to_dict("records"),
+            # sort_action="native",  # Enables sorting by clicking column headers
+            **table_layout
+        )
+
+    return f"Finished", button_style1["style"], button_style1["style"], schedule_table
 
 
 @app.callback(
@@ -529,42 +534,50 @@ def create_gannt_chart(schedule_df):
     return fig
 
 
+def create_runtime_and_score_display(runtime, score):
+    runtime_card = dbc.Card(
+        dbc.CardBody(
+            [
+                html.H4("Runtime", className="card-title text-center"),
+                html.H2(f"{runtime:.2f}", className="card-text text-center"),
+            ]
+        ),
+        style={"borderRadius": "10px", "margin": "10px", "backgroundColor": "white", "color": "#202020"},
+    )
+
+    score_card = dbc.Card(
+        dbc.CardBody(
+            [
+                html.H4("Total weighted delay", className="card-title text-center"),
+                html.H2(f"{score:.0f}", className="card-text text-center"),
+            ]
+        ),
+        style={"borderRadius": "10px", "margin": "10px", "backgroundColor": "white", "color": "#202020"},
+    )
+
+    return runtime_card, score_card
+
+
 # Graphs Section Layout
 def graphs_layout():
 
     schedule_data = getattr(app.layout, 'schedule_df', None)
     if schedule_data is not None:
-        schedule = dash_table.DataTable(
-            id="schedule-table",
-            columns=[{"name": col, "id": col, "deletable": False}
-                     for col in schedule_data.columns],
-            data=app.layout.schedule_df.to_dict("records"),
-            # sort_action="native",  # Enables sorting by clicking column headers
-            **table_layout
-        )
 
         score, runtime = app.layout.schedule_stats
+        runtime_card, score_card = create_runtime_and_score_display(runtime, score)
 
-        display_runtime = html.Div([dbc.Row(html.Label("Runtime of the algorithm", className="mt-2")),
-                                    dbc.Row(f"{runtime}")])
-        display_score = html.Div([dbc.Row(html.Label("Score of the algorithm", className="mt-2")),
-                                  dbc.Row(f"{score}")])
         schedule_graph = dcc.Graph(
             figure=create_gannt_chart(schedule_data), config={'staticPlot': True}
         )
 
         return html.Div(
             [
-                html.H3("Graphs Section", className="text-center"),
+                html.H3("Stats and visualizations", className="text-center"),
                 dbc.Row(
                     [
-                        dbc.Col(schedule, width=12),
-                    ]
-                ),
-                dbc.Row(
-                    [
-                        dbc.Col(display_runtime, width=6),
-                        dbc.Col(display_score, width=6)
+                        dbc.Col(runtime_card, width=6),
+                        dbc.Col(score_card, width=6)
                     ]
                 ),
                 dbc.Row(
