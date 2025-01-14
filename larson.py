@@ -9,6 +9,31 @@ import plotly.graph_objects as go
 from plotly.colors import n_colors
 
 
+
+
+# TO DO Lijst tool:
+# File
+# Lege tabel laden aan het begin
+# Job ID moet uniek zijn en laden bij add row (en als je job id 1,2,4 moet werken read input dingetje (lex zijn probleem))
+
+# Algorithm settings
+# Algorithm status needs to be expanded:
+# 	Needs to look nicer
+# 	Needs to add current score
+# 	Needs to add remaining time
+# 	Maybe a wheel?
+# When returning to the algorithm settings after running the page should keep loading
+# No buttons should be able to be pressed when algorithm is running
+
+# Graphs Section
+# Graph depicting path of score over time 
+# When handling a lot of jobs, the graph should be ablt to be scrolled, only showing the first 15 jobs
+# the percentage gap should be displayed or it should say optimal
+
+
+# Algemeen, code iets cleaner (maar ja boeie)
+
+
 # Initialize the app
 app = Dash(__name__, external_stylesheets=[
            dbc.themes.BOOTSTRAP], suppress_callback_exceptions=True)
@@ -195,26 +220,29 @@ def display_page(pathname):
 def file_input_layout():
     return html.Div(
         [
-            html.H1("Upload your excel file", style={"textAlign": "center"}),
+            html.H1("Upload Data", style={"textAlign": "center"}),
 
             dcc.Upload(
-                id='upload-data',
-                children=html.Div([
-                    'Drag and Drop or ',
-                    html.A('Select an Excel File', style={'color': 'blue'})
-                ]),
-                style={
-                    'width': '80%',
-                    'height': '60px',
-                    'lineHeight': '60px',
-                    'borderWidth': '2px',
-                    'borderStyle': 'solid',
-                    'borderRadius': '10px',
-                    'textAlign': 'center',
-                    'margin': 'auto'
-                },
-                multiple=False
-            ),
+            id='upload-data',
+            children=html.Div([
+                'Drag and Drop or ',
+                html.A('Select an Excel File', style={'color': '#1C4E80', 'textDecoration': 'underline'})
+            ]),
+            style={
+                'width': '50%',
+                'height': '50px',
+                'lineHeight': '50px',
+                'borderWidth': '2px',
+                'borderStyle': 'dashed',
+                'borderRadius': '5px',
+                'textAlign': 'center',
+                'margin': 'auto',
+                'backgroundColor': '#F1F1F1',
+                'color': '#202020',
+                'cursor': 'pointer'
+            },
+            multiple=False
+        ),
 
             html.Div(id='output-data-upload'),
             html.Button(
@@ -244,7 +272,15 @@ def file_input_layout():
 def restore_data(n_clicks):
     if n_clicks > 0 and app.layout.df is not None:
         df = app.layout.df
-        return html.Div([
+        return html.Div([dcc.Link(
+                    dbc.Button(
+                        "Submit Data",
+                        id="submit-data-btn",
+                        **button_style1
+                    ),
+                    href="/algorithm-settings",  # Link to the algorithm settings page
+                    style={"textAlign": "center", "display": "block"}
+                ),
             dash_table.DataTable(
                 id="sortable-table",
                 columns=[{"name": col, "id": col} for col in df.columns],
@@ -504,14 +540,21 @@ def create_gannt_chart(schedule_df):
                 orientation='h',
                 name=row['Job ID'],
                 marker_color=job_colors[row['Job ID']],
-                showlegend=False
+                showlegend=False,
+                            hovertemplate=(
+                f"Machine: {m+1}<br>"
+                f"Job ID: {row['Job ID']}<br>"
+                "<extra></extra>"
+                # "Start Time: %{base}<br>"
+                # "Duration: %{x}<extra></extra>"
+            )
             ))
 
     for job_id, color in job_colors.items():
         fig.add_trace(go.Scatter(
             x=[None], y=[None],
             mode='markers',
-            marker=dict(size=10, color=color),
+            marker=dict(size=20, color=color),
             name=job_id
         ))
 
@@ -521,7 +564,8 @@ def create_gannt_chart(schedule_df):
         yaxis_title="Machine",
         barmode='stack',
         xaxis=dict(
-            fixedrange=True  # Disable zooming
+            fixedrange=False  # Disable zooming
+            
         ),
         yaxis=dict(
             tickmode='linear',
@@ -568,7 +612,11 @@ def graphs_layout():
         runtime_card, score_card = create_runtime_and_score_display(runtime, score)
 
         schedule_graph = dcc.Graph(
-            figure=create_gannt_chart(schedule_data), config={'staticPlot': True}
+            figure=create_gannt_chart(schedule_data),     config={
+                                                                'staticPlot': False,  # Enable interactions
+                                                                'scrollZoom': True,   # Enable scrolling
+                                                                'displayModeBar': False,  # Show mode bar
+                                                            }
         )
 
         return html.Div(
