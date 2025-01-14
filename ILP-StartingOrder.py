@@ -21,7 +21,7 @@ def readInput(excel_file_path):
     data = pd.read_excel(excel_file_path)
     return data
 
-def runAlgorithm(data, max_runtime):
+def runAlgorithm(data, max_runtime, xS):
     '''
     An ILP algorithm that uses gurobi to solve the permutation flowshop scheduling
     problem with release dates and total weighted tardiness as a objective function
@@ -94,7 +94,10 @@ def runAlgorithm(data, max_runtime):
 
     # Set timelimit parameter
     #model.Params.TimeLimit = max_runtime
-
+    for i in range(1, num_jobs + 1):
+        for j in range(1, num_jobs + 1):
+            x[i, j].start = xS[i, j]
+    
     # Find schedule
     model.optimize()
 
@@ -121,10 +124,33 @@ def runAlgorithm(data, max_runtime):
 
 # Example usage
 if __name__ == "__main__":
+    #43024
+    schedule = [ 50,  49,  63,  65,  15,  88,  37,   4,  98,  38, 100,  94,  19,
+        95,  92,  17,  55,  70,  73,  71,  81,  51,  45,  42,  89,  64,
+        47,   9,   8,  60,  93,  57,  97,   1,  76,  75,  53,  44,  11,
+        40,  22,  21,  85,  58,  28,  77,  62,  72,  68,  91,  67,  14,
+        12,  48,  10,  35,  36,  99,  80,  61,  56,  52,  86,  83,  82,
+        13,   7,  84,  23,  31,  26,  79,  16,   3,  87,   2,  46,  24,
+        41,  96,  78,  20,   5,  30,  39,  32,  66,  18,  43,  27,  34,
+         6,  59,  25,  74,  54,  33,  90,  69,  29]
+
+    n = len(schedule)
+
+    # Initialize an empty matrix of size n x n with zeros
+    matrix = np.zeros((n + 1, n + 1), dtype=int)
+
+    # Loop over each pair of jobs i and j
+    for i in range(n):
+        for j in range(n):
+            if schedule.index(i + 1) < schedule.index(j + 1):
+                matrix[i + 1][j + 1] = 1
+
+    # Display the matrix
+    #print(matrix)
+
     data = readInput('data/job_data4.xlsx')
-    print(data)
     MAX_RUNTIME = 10
-    schedule, score, runtime = runAlgorithm(data, MAX_RUNTIME)
+    schedule, score, runtime = runAlgorithm(data, MAX_RUNTIME, matrix)
     print("Schedule:\n", schedule)
     print("Score:", score)
     print("Runtime:", runtime)
