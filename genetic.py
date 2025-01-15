@@ -77,7 +77,7 @@ def runAlgorithmGen(data, npop = 10, gens = 100):
 
         # Stop if one of the schedules has 0 delay
         if np.min(scores) == 0:
-            return 0, schedules[np.argmin(scores)]
+            break #return 0, schedules[np.argmin(scores)]
         
         # Generate new schedules
         for i in range(npop - 1):
