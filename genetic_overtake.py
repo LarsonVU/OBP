@@ -75,7 +75,7 @@ def runAlgorithmGen(data, npop = 10, gens = 100):
 
         # Stop if one of the schedules has 0 delay
         if np.min(scores) == 0:
-            break
+            return 0, schedules[np.argmin(scores)]
         
         # Generate new schedules
         for i in range(npop - 1):
@@ -252,24 +252,15 @@ def getProbabilitites(scores):
 
     return probs
 
-if __name__ == "__main__":
-    data = readInput('data/job_data4.xlsx')
+# if __name__ == "__main__":
+#     data = readInput('data/job_data6.xlsx')
 
-    start = time.time()
-    scores, score, schedule = runAlgorithmGen(data, npop = 10, gens = 1000)
-    end = time.time()
-    print(schedule.tolist())
-    print('Schedule:\n', schedule)
-    print('Score:', score)
-    print('Runtime:', end - start)
+#     start = time.time()
+#     scores, score, schedule = runAlgorithmGen(data, npop = 10, gens = 1000)
+#     end = time.time()
 
-    print('List of scores:', scores)
+#     print('Schedule:\n', schedule)
+#     print('Score:', score)
+#     print('Runtime:', end - start)
 
-# npop = 10
-# gens = 100
-# data = readInput('data/job_data6.xlsx')
-# start = time.time()
-# print(runAlgorithmGen(data, npop, gens))
-# end = time.time()
-
-# print(end-start)
+#     print('List of scores:', scores)
