@@ -39,6 +39,8 @@ def runAlgorithmGen(data, npop = 10, gens = 100):
     - schedule -> the best schedule that the algorithm found
     - score -> the score of the best schedule
     '''
+    #start the timer
+    start_time = time.time()
 
     # Read the data from the dataframe
     job_ids = np.array(data.job_id)
@@ -75,7 +77,7 @@ def runAlgorithmGen(data, npop = 10, gens = 100):
 
         # Stop if one of the schedules has 0 delay
         if np.min(scores) == 0:
-            break
+            break #return 0, schedules[np.argmin(scores)]
         
         # Generate new schedules
         for i in range(npop - 1):
@@ -107,8 +109,52 @@ def runAlgorithmGen(data, npop = 10, gens = 100):
 
     # Get the best schedule
     best_schedule = schedules[np.argmin(scores)]
+    best_schedule_df = scheduleToDf(best_schedule, machines, release_dates, processing_times)
+    # Get the exact time
+    exact_time = time.time() - start_time
 
-    return best_scores, min_score, best_schedule
+    return best_schedule_df, min_score, exact_time, best_scores, best_schedule 
+
+def scheduleToDf(schedule, machines, release_dates, processing_times):
+
+    # Initialize completion times array
+    num_jobs = len(schedule)
+    completion_times = np.zeros_like(processing_times, dtype=int)
+    current_time = 0
+
+    # Get the completion times of all jobs on the first machine
+    for job in schedule:
+        if release_dates[job - 1] > current_time:
+            current_time = release_dates[job - 1]
+
+        completion_times[job - 1, 0] = current_time + processing_times[job - 1, 0]
+        current_time = completion_times[job - 1, 0]
+
+    # Get the remaining compeletion times
+    for machine in machines[1:]:
+        machine -= 1
+
+        for j in range(len(schedule)):
+            job = schedule[j]
+
+            if j == 0:
+                C = completion_times[job - 1, machine - 1]
+            else:
+                C = np.max([completion_times[schedule[j - 1] - 1, machine], completion_times[job - 1, machine - 1]])
+
+            completion_times[job - 1, machine] = C + processing_times[job - 1, machine]
+
+    # Append job schedule to DataFrame
+    start_times = completion_times - processing_times
+    data  = pd.DataFrame({'Job ID': [i for i in range(1, num_jobs + 1)]})
+
+    for m in machines:
+        data[f'Start time machine {m}'] = start_times[:, m - 1]
+        data[f'Completion time machine {m}'] = completion_times[:, m - 1]
+    
+    data = data.sort_values(by='Job ID')
+    return data
+
 
 def calculateScore(schedule, machines, release_dates, due_dates, weights, processing_times):
     '''
@@ -253,17 +299,18 @@ def getProbabilitites(scores):
     return probs
 
 if __name__ == "__main__":
-    data = readInput('data/job_data4.xlsx')
+    data = readInput('data/overtake_example.xlsx')
 
     start = time.time()
-    scores, score, schedule = runAlgorithmGen(data, npop = 10, gens = 1000)
+    best_schedule, min_score, exact_time, best_scores, df = runAlgorithmGen(data, npop = 10, gens = 100)
     end = time.time()
-    print(schedule.tolist())
-    print('Schedule:\n', schedule)
-    print('Score:', score)
+
+    print('Schedule:\n', best_schedule)
+    print('Score:', min_score)
     print('Runtime:', end - start)
 
-    print('List of scores:', scores)
+    print('List of scores:', best_scores)
+    print(df)
 
 # npop = 10
 # gens = 100
