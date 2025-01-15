@@ -93,7 +93,7 @@ def runAlgorithm(data, max_runtime):
     model.addConstrs((x[i, j] + x[j, i] == 1 for i in job_ids for j in job_ids if i != j), name = "MutualExclusion")
 
     # Set timelimit parameter
-    #model.Params.TimeLimit = max_runtime
+    model.Params.TimeLimit = max_runtime
 
     # Find schedule
     model.optimize()
@@ -123,7 +123,7 @@ def runAlgorithm(data, max_runtime):
 if __name__ == "__main__":
     data = readInput('data/job_data4.xlsx')
     print(data)
-    MAX_RUNTIME = 10
+    MAX_RUNTIME = 100
     schedule, score, runtime = runAlgorithm(data, MAX_RUNTIME)
     print("Schedule:\n", schedule)
     print("Score:", score)

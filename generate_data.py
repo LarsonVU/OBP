@@ -2,11 +2,11 @@ import pandas as pd
 import random
 
 # Configuration variables
-output_file = "data/job_data5.xlsx"
-number_of_jobs = 100
-releases_date_range = 100
+output_file = "data/job_data6.xlsx"
+number_of_jobs = 1000
+releases_date_range = 1000
 min_due_date_range = 200
-max_due_date_range = 500
+max_due_date_range = 1000
 service_times_max = 5
 weight_max = 10
 num_machines = 4 # Number of random integers (service times) per job
