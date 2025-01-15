@@ -8,7 +8,7 @@ import ilp_overtake as ilp
 import plotly.graph_objects as go
 import genetic as gen
 from plotly.colors import n_colors
-
+import dash
 
 
 
@@ -28,7 +28,6 @@ from plotly.colors import n_colors
 
 # Graphs Section
 # Graph depicting path of score over time 
-# When handling a lot of jobs, the graph should be ablt to be scrolled, only showing the first 15 jobs
 # the percentage gap should be displayed or it should say optimal
 
 
@@ -108,6 +107,21 @@ button_style2 = {"style" : {"display": "block",  # Initially hidden
                   "cursor": "pointer",  # Pointer cursor on hover
                   "transition": "background-color 0.3s ease", }}  # Smooth hover transition  # Make the button visible}
 
+
+unselected_button_style1 = {
+    "style": {
+        "margin": "20px auto",
+        "backgroundColor": "#f0f0f0",  # Light background for unselected state
+        "color": "#333333",  # Darker text for visibility
+        "border": "1px solid #dcdcdc",  # Light border
+        "padding": "10px 20px",
+        "borderRadius": "5px",
+        "fontSize": "16px",
+        "fontWeight": "normal",  # Normal weight for unselected
+        "fontFamily": "montserrat, sans-serif",
+        "cursor": "pointer",
+        "transition": "background-color 0.3s ease, color 0.3s ease",  # Smooth transitions
+    }} 
 
 
 
@@ -198,6 +212,8 @@ app.layout = html.Div(
         content
     ]
 )
+app.layout.total_pages = 1
+app.layout.jobs_per_page = 10
 
 # Callbacks to handle page navigation
 
@@ -417,10 +433,11 @@ def algorithm_settings_layout():
                         [ dbc.Row( html.Label("Choose Algorithm:", className="mt-2", style={"display": "inline-block"})),
                           dbc.Row(  dbc.RadioItems(
                                 id="algorithm-type",
-                                className="btn-group d-flex",  # Align buttons in a group and stretch them
+                                className="radio-group",
+                                inline=True,
                                 inputClassName="btn-check",
-                                labelClassName="btn btn-outline-primary flex-fill",  # Ensure buttons fill the group
-                                labelCheckedClassName="btn btn-primary flex-fill active",  # Active button style
+                                labelClassName="btn btn-outline-primary",
+                                labelCheckedClassName="active",
                                 options=[
                                     {"label": "ILP", "value": 1},
                                     {"label": "Genetic", "value": 2},
@@ -561,8 +578,8 @@ def create_gannt_chart(schedule_df):
     machines = int((len(schedule_df.columns)-1)/2)
     color_scheme = n_colors(
         'rgb(234, 106, 71)', 'rgb(0, 145, 213)', len(schedule_df), colortype='rgb')
-    app.layout.df = app.layout.df.sort_values(by='Release Date')
-    job_ids = app.layout.df['Job ID'].tolist()
+
+    job_ids = schedule_df['Job ID'].tolist()
     job_colors = {job_id: color for job_id,
                   color in zip(job_ids, color_scheme)}
 
@@ -603,6 +620,62 @@ def create_gannt_chart(schedule_df):
     return fig
 
 
+def create_secondary_gantt_chart(schedule_df):
+    fig = go.Figure()
+
+    machines = int((len(schedule_df.columns) - 1) / 2)
+    machine_colors = n_colors(
+        'rgb(255, 127, 80)', 'rgb(70, 130, 180)', machines, colortype='rgb')
+
+    for index, row in schedule_df.iterrows():
+        for m in range(machines):
+            fig.add_trace(go.Bar(
+                x=[row[f'Completion time machine {m+1}'] - row[f'Start time machine {m+1}']],
+                y=[row['Job ID']],
+                base=row[f'Start time machine {m+1}'],
+                orientation='h',
+                marker_color=machine_colors[m],
+                name=f"Machine {m+1}",
+                #legendgroup=f"Machine {m+1}",
+                hovertemplate=(
+                    f"Job ID: {row['Job ID']}<br>"
+                    f"Machine: {m+1}<br>"
+                    "<extra></extra>"
+                ), 
+                showlegend=False
+            ))
+
+    for job_id, color in enumerate(machine_colors):
+        fig.add_trace(go.Scatter(
+        x=[None], y=[None],
+        mode='markers',
+        marker=dict(size=10, color=color),
+        name=f"Machine {job_id +1}",
+    ))
+
+
+    fig.update_layout(
+        title="Machine Schedule for Jobs",
+        xaxis_title="Time",
+        yaxis_title="Job ID",
+        barmode='stack',
+        xaxis=dict(
+            fixedrange=False  # Enable zooming for detailed view
+        ),
+        yaxis=dict(
+            tickmode='linear',
+            tick0=1,
+            dtick=1,
+            fixedrange=True  # Enable zooming for detailed view
+        ),
+        showlegend=True,
+    )
+
+
+    return fig
+
+
+
 def create_runtime_and_score_display(runtime, score):
     runtime_card = dbc.Card(
         dbc.CardBody(
@@ -637,31 +710,94 @@ def graphs_layout():
         runtime_card, score_card = create_runtime_and_score_display(runtime, score)
 
         schedule_graph = dcc.Graph(
-            figure=create_gannt_chart(schedule_data),     config={
-                                                                'staticPlot': False,  # Enable interactions
-                                                                'scrollZoom': True,   # Enable scrolling
-                                                                'displayModeBar': False,  # Show mode bar
-                                                            }
+            figure=create_gannt_chart(schedule_data),     
+            config={
+                'staticPlot': False,  # Enable interactions
+                'scrollZoom': True,   # Enable scrolling
+                'displayModeBar': False,  # Show mode bar
+            }
         )
+
+        # Pagination controls
+        total_jobs = len(schedule_data)
+        jobs_per_page = app.layout.jobs_per_page     
+        total_pages = (total_jobs + jobs_per_page - 1) // jobs_per_page
+        app.layout.total_pages = total_pages
+
+        if total_pages > 1:
+            pagination_buttons = html.Div(
+            [dbc.RadioItems(
+            id="pagination-buttons",
+            className="radio-group",
+            inline=True,
+            inputClassName="btn-check",
+            labelClassName="btn btn-outline-primary",
+            labelCheckedClassName="active",
+            options=[{"label": f"{i+1}", "value": i+1} for i in range(total_pages)],
+            value=1,
+            style={"textAlign": "center", "margin": "20px auto"},
+            )])
+        else:
+            pagination_buttons = html.Div("", style={"display": "none"})
+
+        # Initial display of the first 10 jobs
+        initial_jobs = schedule_data.iloc[:jobs_per_page]
+
+        schedule_graph2 = dcc.Graph(
+            id="schedule-graph2",
+            figure=create_secondary_gantt_chart(initial_jobs),
+            config={
+                'staticPlot': False,  # Enable interactions
+                'scrollZoom': True,   # Enable scrolling
+                'displayModeBar': False,  # Show mode bar
+            }
+        )
+
+        page = html.Div("", id='page-number', style={"display": "none"})
 
         return html.Div(
             [
-                html.H3("Stats and visualizations", className="text-center"),
-                dbc.Row(
-                    [
-                        dbc.Col(runtime_card, width=6),
-                        dbc.Col(score_card, width=6)
-                    ]
-                ),
-                dbc.Row(
-                    [
-                        dbc.Col(schedule_graph, width=12),
-                    ]
-                )
+            html.H3("Stats and visualizations", className="text-center"),
+            page,
+            dbc.Row(
+                [
+                dbc.Col(runtime_card, width=6),
+                dbc.Col(score_card, width=6)
+                ]
+            ),
+            dbc.Row(
+                [
+                dbc.Col(schedule_graph, width=12),
+                ]
+            ),
+                        dbc.Row(
+                [
+                dbc.Col(pagination_buttons, width=12, style={"textAlign": "center"}),
+                ],
+                style={"justifyContent": "center", "marginBottom": "20px"}
+            ),
+            dbc.Row(
+                [
+                dbc.Col(schedule_graph2, width=12),
+                ]
+            ),
             ]
         )
-    else:
-        return html.H3("The schedule will be displayed here")
+
+    return html.H3("The schedule will be displayed here")
+
+
+@app.callback(
+    [Output("schedule-graph2", "figure"), Output("page-number", "style")],
+    Input("pagination-buttons", "value"),
+    prevent_initial_call=True
+)
+def update_graphs(selected_page):
+    start_idx = (selected_page - 1) * app.layout.jobs_per_page
+    end_idx = start_idx + app.layout.jobs_per_page
+    page_jobs = app.layout.schedule_df.iloc[start_idx:end_idx]
+
+    return create_secondary_gantt_chart(page_jobs), {"display" : None}
 
 
 @app.callback(
