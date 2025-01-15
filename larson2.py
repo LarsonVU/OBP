@@ -6,6 +6,7 @@ import io
 import plotly.express as px
 import ilp_overtake as ilp
 import plotly.graph_objects as go
+import genetic as gen
 from plotly.colors import n_colors
 
 
@@ -367,14 +368,16 @@ def display_table(contents, filename):
 
 
 @app.callback(
-    Output('placeholder', 'children'),
+    Output('sortable-table', 'data'),
     Input('sortable-table', 'data'),
     State('sortable-table', 'columns'),
     prevent_initial_call=True)
 def update_input_data(rows, columns):
+    for i, row in enumerate(rows):
+        row[columns[0]['name']] = i + 1  # Assuming the first column is Job ID
     app.layout.df = pd.DataFrame(
         rows, columns=[col['name'] for col in columns]).astype(int)
-    return ''  # app.layout.df.iloc[-1]['Job ID']
+    return rows # app.layout.df.iloc[-1]['Job ID']
 
 
 @app.callback(Output('sortable-table', 'data', allow_duplicate=True),
@@ -400,7 +403,7 @@ def algorithm_settings_layout():
                 [
                     dbc.Col(
                         [
-                            html.Label("Max Runtime:", className="mt-2"),
+                            html.Label("Max Runtime:", className="mt-2", id="parameter-label"),
                             dcc.Input(
                                 id="max-runtime",
                                 type="number",
@@ -408,14 +411,32 @@ def algorithm_settings_layout():
                                 className="form-control",
                             ),
                         ],
-                        width=6,
+                        width=4,
+                    ),
+                    dbc.Col(
+                        [ dbc.Row( html.Label("Choose Algorithm:", className="mt-2", style={"display": "inline-block"})),
+                          dbc.Row(  dbc.RadioItems(
+                                id="algorithm-type",
+                                className="btn-group d-flex",  # Align buttons in a group and stretch them
+                                inputClassName="btn-check",
+                                labelClassName="btn btn-outline-primary flex-fill",  # Ensure buttons fill the group
+                                labelCheckedClassName="btn btn-primary flex-fill active",  # Active button style
+                                options=[
+                                    {"label": "ILP", "value": 1},
+                                    {"label": "Genetic", "value": 2},
+                                ],
+                                value=1,
+                                style={"display": "inline-block"}
+                            )),
+                        ],
+                        width=4,
                     ),
                     dbc.Col(
                         [
                             html.Label("Algorithm Status:", className="mt-2"),
                             html.Div("Not running yet", id='param-2'),
                         ],
-                        width=6,
+                        width=4,
                     ),
                 ]
             ),
@@ -456,6 +477,17 @@ def algorithm_settings_layout():
     )
 
 
+@app.callback(Output('parameter-label', 'children'),
+              Output('max-runtime', 'placeholder'),
+              Input('algorithm-type', 'value'),
+              prevent_initial_call=True)
+def update_parameters(algorithm_type):
+    if algorithm_type == 1:
+        return "Max Runtime:", "Enter value (default 100)"
+    else:
+        return "Max Generations:", "Enter value (default 100)"
+
+
 @app.callback(Output('param-2', 'children'),
               Input('run-btn', 'n_clicks'),
               prevent_initial_call=True)
@@ -482,9 +514,10 @@ def enter_max_runtime_value(n_clicks, max_runtime):
     Output('results-table', 'children'),
     Input('run-btn', 'n_clicks'),
     State('max-runtime', 'value'),
+    State('algorithm-type', 'value'),
     prevent_initial_call=True
 )
-def run_specified_algorithm(n_clicks, max_runtime):
+def run_specified_algorithm(n_clicks, max_runtime, algorithm_type):
     data = app.layout.df.copy()
     columns = ['job_id', 'release_date', 'due_date', 'weight'] + \
         [f"st_{i+1}" for i in range(len(data.columns)-4)]
@@ -493,7 +526,10 @@ def run_specified_algorithm(n_clicks, max_runtime):
     if max_runtime is None:
         max_runtime = 100
 
-    schedule, score, runtime = ilp.runAlgorithm(data, max_runtime)
+    if algorithm_type == 2:
+        schedule, score, runtime, _, _ = gen.runAlgorithmGen(data, 10, max_runtime)
+    else:
+        schedule, score, runtime = ilp.runAlgorithm(data, max_runtime)
 
     app.layout.schedule_df = schedule
     app.layout.schedule_stats = (score, runtime)
@@ -538,25 +574,14 @@ def create_gannt_chart(schedule_df):
                 y=[m+1],
                 base=row[f'Start time machine {m+1}'],
                 orientation='h',
-                name=row['Job ID'],
                 marker_color=job_colors[row['Job ID']],
                 showlegend=False,
-                            hovertemplate=(
+                hovertemplate=(
                 f"Machine: {m+1}<br>"
                 f"Job ID: {row['Job ID']}<br>"
                 "<extra></extra>"
-                # "Start Time: %{base}<br>"
-                # "Duration: %{x}<extra></extra>"
             )
             ))
-
-    for job_id, color in job_colors.items():
-        fig.add_trace(go.Scatter(
-            x=[None], y=[None],
-            mode='markers',
-            marker=dict(size=20, color=color),
-            name=job_id
-        ))
 
     fig.update_layout(
         title="Job Schedule for Machines",
@@ -573,7 +598,7 @@ def create_gannt_chart(schedule_df):
             dtick=1,
             fixedrange=True  # Disable panning/zooming
         ),
-        showlegend=True,
+        showlegend=False,
     )
     return fig
 
