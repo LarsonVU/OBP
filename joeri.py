@@ -372,7 +372,7 @@ def download_schedule(n_clicks):
 
 
 
-def create_gannt_chart(schedule_df):
+def create_gannt_chart(schedule_df, highlight_job_id=None):
     fig = go.Figure()
 
     machines = int((len(schedule_df.columns)-1)/2)
@@ -383,14 +383,21 @@ def create_gannt_chart(schedule_df):
 
     for index, row in schedule_df.iterrows():
         for m in range(machines):
+            # Set opacity to 1 for the highlighted job or 0.3 for others
+            opacity = 1 if (highlight_job_id is None or row['Job ID'] == highlight_job_id) else 0.3
+
             fig.add_trace(go.Bar(
                 x=[row[f'Completion time machine {m+1}'] - row[f'Start time machine {m+1}']],
                 y=[m+1],
                 base=row[f'Start time machine {m+1}'],
                 orientation='h',
                 name=row['Job ID'],
-                marker_color = job_colors[row['Job ID']],
-                showlegend= False
+                marker_color=job_colors[row['Job ID']],
+                opacity=opacity,  # Adjust opacity based on highlight_job_id
+                showlegend=False,
+                customdata=[row['Job ID']],  # Store the Job ID in customdata
+                hoverinfo='none'  # Disable hover info
+
             ))
 
     for job_id, color in job_colors.items():
@@ -418,6 +425,7 @@ def create_gannt_chart(schedule_df):
         showlegend=True,
     )
     return fig
+
 
 
 # Graphs Section Layout
@@ -449,7 +457,9 @@ def graphs_layout():
         display_score = html.Div([dbc.Row(html.Label("Score of the algorithm", className="mt-2")),
                                     dbc.Row(f"{score}")])
         schedule_graph = dcc.Graph(
-            figure= create_gannt_chart(schedule_data), config={'staticPlot': True}
+            id = 'gant_chart',
+            figure= create_gannt_chart(schedule_data, highlight_job_id=1),
+            config={'displayModeBar': False}  # Remove the modebar (controls)
         )
 
         return html.Div(
@@ -476,7 +486,20 @@ def graphs_layout():
     else:
         return html.H3("The schedule will be displayed here")
 
+@app.callback(
+    Output('gant_chart', 'figure'),
+    Input('gant_chart', 'clickData')  # Listen for clicks
+)
+def update_chart(click_data):
+    schedule_df = getattr(app.layout, 'schedule_df', None)
 
+    if click_data is None:
+        return create_gannt_chart(schedule_df)  # No click, return the default chart
+
+    # Get the Job ID from the clicked bar
+    # clicked_job_id = click_data['points'][0]['text']   Assuming 'text' contains the Job ID
+    print(click_data)
+    return create_gannt_chart(schedule_df, highlight_job_id=int(click_data['points'][0]['customdata'])) 
 
 @app.callback(
     [Output("sidebar", "style"),
