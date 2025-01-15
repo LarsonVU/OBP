@@ -1,0 +1,29 @@
+/* Style for selected button */
+.radio-item-selected {
+    margin: 20px auto;
+    background-color: #1C4E80; /* Button background color */
+    color: #FFFFFF; /* Button text color */
+    border: none; /* No border */
+    padding: 10px 20px; /* Padding inside the button */
+    border-radius: 5px; /* Rounded corners */
+    font-size: 16px; /* Font size */
+    font-weight: bold; /* Bold text */
+    font-family: "montserrat", sans-serif; /* Font family */
+    cursor: pointer; /* Pointer cursor on hover */
+    transition: background-color 0.3s ease; /* Smooth hover transition */
+}
+
+/* Style for unselected button */
+.radio-item-unselected {
+    margin: 20px auto;
+    background-color: #f0f0f0; /* Light background for unselected state */
+    color: #333333; /* Darker text for visibility */
+    border: 1px solid #dcdcdc; /* Light border */
+    padding: 10px 20px;
+    border-radius: 5px;
+    font-size: 16px;
+    font-weight: normal; /* Normal weight for unselected */
+    font-family: "montserrat", sans-serif;
+    cursor: pointer;
+    transition: background-color 0.3s ease, color 0.3s ease; /* Smooth transitions */
+}

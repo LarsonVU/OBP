@@ -21,7 +21,7 @@ def readInput(excel_file_path):
     data = pd.read_excel(excel_file_path)
     return data
 
-def runAlgorithm(data, max_runtime):
+def runAlgorithm(data, max_runtime, xS):
     '''
     An ILP algorithm that uses gurobi to solve the permutation flowshop scheduling
     problem with release dates and total weighted tardiness as a objective function
@@ -93,8 +93,11 @@ def runAlgorithm(data, max_runtime):
     model.addConstrs((x[i, j] + x[j, i] == 1 for i in job_ids for j in job_ids if i != j), name = "MutualExclusion")
 
     # Set timelimit parameter
-    model.Params.TimeLimit = max_runtime
-
+    #model.Params.TimeLimit = max_runtime
+    for i in range(1, num_jobs + 1):
+        for j in range(1, num_jobs + 1):
+            x[i, j].start = xS[i, j]
+    
     # Find schedule
     model.optimize()
 
@@ -121,10 +124,26 @@ def runAlgorithm(data, max_runtime):
 
 # Example usage
 if __name__ == "__main__":
+    #43024
+    schedule = [72, 90, 88, 45, 67, 9, 15, 64, 57, 97, 47, 19, 55, 94, 4, 85, 92, 70, 51, 89, 60, 83, 63, 37, 49, 71, 68, 81, 38, 65, 100, 98, 50, 74, 40, 76, 48, 77, 62, 22, 80, 93, 16, 73, 42, 28, 3, 17, 84, 53, 75, 99, 12, 35, 91, 27, 78, 14, 2, 33, 1, 95, 58, 36, 61, 44, 18, 11, 10, 24, 34, 86, 25, 13, 82, 29, 96, 41, 56, 79, 87, 8, 30, 59, 39, 43, 5, 21, 7, 66, 31, 20, 46, 32, 23, 54, 52, 69, 26, 6]
+
+    n = len(schedule)
+
+    # Initialize an empty matrix of size n x n with zeros
+    matrix = np.zeros((n + 1, n + 1), dtype=int)
+
+    # Loop over each pair of jobs i and j
+    for i in range(n):
+        for j in range(n):
+            if schedule.index(i + 1) < schedule.index(j + 1):
+                matrix[i + 1][j + 1] = 1
+
+    # Display the matrix
+    #print(matrix)
+
     data = readInput('data/job_data4.xlsx')
-    print(data)
-    MAX_RUNTIME = 100
-    schedule, score, runtime = runAlgorithm(data, MAX_RUNTIME)
+    MAX_RUNTIME = 10
+    schedule, score, runtime = runAlgorithm(data, MAX_RUNTIME, matrix)
     print("Schedule:\n", schedule)
     print("Score:", score)
     print("Runtime:", runtime)
