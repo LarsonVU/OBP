@@ -1,7 +1,15 @@
+:root {
+    --header-color: #0A1F3D;
+    --knoppen-blauw: #3c4a6d;
+    --nav-color: #e5f0ff;
+    --background-color: #fff;
+    --accent-color: #d6a419;
+}
+
 /* Style for selected button */
 .radio-item-selected {
     margin: 20px auto;
-    background-color: #1C4E80; /* Button background color */
+    background-color: var(--knoppen-blauw); /* Button background color */
     color: #FFFFFF; /* Button text color */
     border: none; /* No border */
     padding: 10px 20px; /* Padding inside the button */
@@ -26,4 +34,53 @@
     font-family: "montserrat", sans-serif;
     cursor: pointer;
     transition: background-color 0.3s ease, color 0.3s ease; /* Smooth transitions */
+}
+
+.form-check {
+    padding-left: 0 !important;
+    .btn {
+        width: 100px;
+        color: var(--knoppen-blauw) !important;
+        border-color: var(--knoppen-blauw) !important;   
+    }
+}
+
+.custom-h3 {
+    position: relative !important;
+    width: fit-content;
+    margin: 0 auto;
+}
+
+.custom-h3::before {
+    content: "" !important;
+    background-color: var(--knoppen-blauw) !important;
+    position: absolute;
+    width: 120% !important;
+    z-index: 100;
+    bottom: -5px;
+    left: -10%;
+    height: 2px;
+    display: block;
+}
+
+
+.btn.active {
+    background-color: var(--knoppen-blauw) !important;
+    border-color: var(--knoppen-blauw) !important;
+    color: #fff !important;
+}
+
+.nav-link {
+    margin-right: 2px !important;
+}
+
+.nav-link:hover {
+    background-color: var(--nav-color);
+    color: var(--knoppen-blauw) !important;
+
+}
+
+.nav-link.active {
+    background-color: var(--nav-color) !important;
+    color: var(--knoppen-blauw) !important;
 }
