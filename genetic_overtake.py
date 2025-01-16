@@ -252,15 +252,15 @@ def getProbabilitites(scores):
 
     return probs
 
-# if __name__ == "__main__":
-#     data = readInput('data/job_data6.xlsx')
+if __name__ == "__main__":
+    data = readInput('data/overtake_example.xlsx')
 
-#     start = time.time()
-#     scores, score, schedule = runAlgorithmGen(data, npop = 10, gens = 1000)
-#     end = time.time()
+    start = time.time()
+    scores, score, schedule = runAlgorithmGen(data, npop = 10, gens = 1000)
+    end = time.time()
 
-#     print('Schedule:\n', schedule)
-#     print('Score:', score)
-#     print('Runtime:', end - start)
+    print('Schedule:\n', schedule)
+    print('Score:', score)
+    print('Runtime:', end - start)
 
-#     print('List of scores:', scores)
+    print('List of scores:', scores)
