@@ -37,7 +37,7 @@ import dash
 # Initialize the app
 app = Dash(__name__, external_stylesheets=[
            dbc.themes.BOOTSTRAP], suppress_callback_exceptions=True)
-app.title = "Excel Upload Dashboard"
+app.title = "MS Tools"
 
 
 
