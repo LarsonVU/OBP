@@ -437,14 +437,19 @@ def algorithm_settings_layout():
                     "The integer linear program (ILP) will find the optimal solution given sufficient time. "
                     "However, finding a reasonable solution takes more time. One can determine the maximum run time in seconds by filling in the parameter.",
                     className="mb-0", id="algorithm-description"
-                )
-            ),
+                ) ,             style={
+        "height": "90px",  # Fixed height
+        "overflow": "hidden",  # Hide overflowing text
+        "textOverflow": "ellipsis",  # Add ellipsis if text overflows
+        }
+            )
+,
         ],
         className="mt-2",
     ),
-    width=6,
+    width=8,
 )
-    parameter_input = dbc.Col(dbc.Row(
+    parameter_input = dbc.Col([dbc.Row(
                         [
                             html.Label("Max Runtime:", className="mt-2 mb-2", id="parameter-label"),
                             dcc.Input(
@@ -453,7 +458,7 @@ def algorithm_settings_layout():
                                 placeholder="Enter value (default 100)",
                                 className="form-control",
                             ),
-                        ]),
+                        ]), dcc.Input(id="population-size", type="number", placeholder="Enter value (default 10)", className="form-control", style={"display": "none"})],
                         width=6, id="parameters"
                     )
 
@@ -478,8 +483,8 @@ def algorithm_settings_layout():
                                 style={"display": "inline-block", "margin": "0px 0px 0px 0px", },
                             )),
                         ],
-                        width=2,
-                    align="center",), 
+                        width=4,
+                    align="stretch",), 
                     algorithm_description]),
                 dbc.Row(
                 [
@@ -554,9 +559,9 @@ def algorithm_settings_layout():
               prevent_initial_call=True)
 def update_parameters(algorithm_type):
     ILP_description = "The integer linear program (ILP) will find the optimal solution given sufficient time. " \
-                        "However, finding a reasonable solution takes more time. One can enter the maximum run time in seconds below."
+                        "However, finding a reasonable solution takes more time. One can enter the maximum run time in seconds below. "
     Genetic_description = "The genetic algorithm will find a reasonable solution given sufficient time. " \
-                            "However, finding the optimal solution might take infinite generations. One can enter the maximum number of generations and popuklation size per generation below. Incrasing these values will increase the runtime."
+                            "However, finding the optimal solution might take infinite generations. One can enter the maximum number of generations and population size per generation below. Increasing these values will increase the runtime."
 
     ILP_parameters = dbc.Col(dbc.Row(
                         [
@@ -567,21 +572,40 @@ def update_parameters(algorithm_type):
                                 placeholder="Enter value (default 100)",
                                 className="form-control",
                             ),
-                        ]),
+                        dcc.Input(id="population-size", type="number", placeholder="Enter value (default 10)", className="form-control", style={"display": "none"})]),
                     )
 
-    Genetic_parameters = dbc.Col([dbc.Row(
-                        [
-                            html.Label("Max Generations:", className="mt-2 mb-2", id="parameter-label"),
-                            dcc.Input(
-                                id="max-runtime",
-                                type="number",
-                                placeholder="Enter value (default 100)",
-                                className="form-control",
-                            ),
-                        ]), dbc.Row([html.Label("Population Size:", className="mt-2 mb-2", id="parameter-label2"),
-                                    dcc.Input(id = "population-size", type="number", placeholder="Enter value (default 10)", className="form-control")],),],
-                    )
+    Genetic_parameters = dbc.Col(
+        dbc.Row(
+            [
+                dbc.Col(
+                    [
+                        html.Label("Max Generations:", className="mt-2 mb-2", id="parameter-label"),
+                        dcc.Input(
+                            id="max-runtime",
+                            type="number",
+                            placeholder="Enter value (default 100)",
+                            className="form-control",
+                        ),
+                    ],
+                    width=6,  # Adjust width to fit half of the row
+                ),
+                dbc.Col(
+                    [
+                        html.Label("Population Size:", className="mt-2 mb-2", id="parameter-label2"),
+                        dcc.Input(
+                            id="population-size",
+                            type="number",
+                            placeholder="Enter value (default 10)",
+                            className="form-control",
+                        ),
+                    ],
+                    width=6,  # Adjust width to fit half of the row
+                ),
+            ]
+        )
+    )
+
 
 
     if algorithm_type == 1:
@@ -594,7 +618,12 @@ def update_parameters(algorithm_type):
               Input('run-btn', 'n_clicks'),
               prevent_initial_call=True)
 def is_algorithm_running(n_clicks):
-    return f"Running"
+    return html.Div(
+            [
+                dbc.Spinner(size="sm", color="--knoppen-blauw"),
+                " Running",
+            ],
+        )#f"Running"
 
 
 @app.callback(
