@@ -303,15 +303,13 @@ def file_input_layout():
 def restore_data(n_clicks):
     if n_clicks > 0 and app.layout.df is not None:
         df = app.layout.df
-        return html.Div([dcc.Link(
+        return html.Div([html.Div(
                     dbc.Button(
                         "Submit Data",
                         id="submit-data-btn",
-                        **button_style1
-                    ),
-                    href="/algorithm-settings",  # Link to the algorithm settings page
-                    style={"textAlign": "center", "display": "block"}
-                ),
+                        href="/algorithm-settings",  # Link to the algorithm settings page
+                        style={"textAlign": "center",} | button_style1["style"]
+                    ), style={"display": "flex", "justifyContent": "center", "alignItems": "center"},),
             dash_table.DataTable(
                 id="sortable-table",
                 columns=[{"name": col, "id": col} for col in df.columns],
@@ -369,17 +367,13 @@ def display_table(contents, filename):
             app.layout.df = df  # Store the dataframe in the app layout
 
             # Return the data table and make the button visible
-            return html.Div([
-                dcc.Link(
+            return html.Div([html.Div(
                     dbc.Button(
                         "Submit Data",
                         id="submit-data-btn",
-                        **button_style1
-                    ),
-                    href="/algorithm-settings",  # Link to the algorithm settings page
-                    style={"textAlign": "center", "display": "block"}
-                ),
-
+                        href="/algorithm-settings",  # Link to the algorithm settings page
+                        style={"textAlign": "center",} | button_style1["style"]
+                    ), style={"display": "flex", "justifyContent": "center", "alignItems": "center"},),
                 dash_table.DataTable(
                     id="sortable-table",
                     columns=[{"name": col, "id": col, "deletable": False}
@@ -403,8 +397,18 @@ def display_table(contents, filename):
     State('sortable-table', 'columns'),
     prevent_initial_call=True)
 def update_input_data(rows, columns):
+    default_value = 0  # Define the default value to replace faulty data
+    
     for i, row in enumerate(rows):
         row[columns[0]['name']] = i + 1  # Assuming the first column is Job ID
+        for col in columns:  # Validate each column value
+            try:
+                # Attempt to convert to int, if it's numeric data
+                row[col['name']] = int(row[col['name']])
+            except (ValueError, TypeError):
+                # If conversion fails, replace with default value
+                row[col['name']] = default_value
+                
     app.layout.df = pd.DataFrame(
         rows, columns=[col['name'] for col in columns]).astype(int)
     return rows # app.layout.df.iloc[-1]['Job ID']
