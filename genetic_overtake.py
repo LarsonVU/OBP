@@ -55,6 +55,9 @@ def runAlgorithmGenO(data, npop = 10, gens = 100):
     # Create an array containing an index for all of the machines 
     machines = np.arange(1, num_machines + 1)
 
+    # Start the timer
+    start_time = time.time()
+
     # Generate random schedules
     schedules = generateRandomSchedules(num_jobs, num_machines, npop)
 
@@ -115,8 +118,54 @@ def runAlgorithmGenO(data, npop = 10, gens = 100):
 
     # Get the best schedule
     best_schedule = schedules[np.argmin(scores)]
+    best_schedule_df = scheduleToDf(best_schedule, machines, release_dates, processing_times)
 
-    return best_scores, min_score, best_schedule
+    # Get the exact time
+    exact_time = time.time() - start_time
+
+    return best_schedule_df, min_score, exact_time, best_scores, best_schedule 
+
+def scheduleToDf(schedule, machines, release_dates, processing_times):
+
+    # Initialize completion times array
+    num_jobs = schedule.shape[1]
+    completion_times = np.zeros_like(processing_times, dtype=int)
+    current_time = 0
+
+    # Get the completion times of all jobs on the first machine
+    for job in schedule[0]:
+        job = int(job)
+
+        if release_dates[job - 1] > current_time:
+            current_time = release_dates[job - 1]
+
+        completion_times[job - 1, 0] = current_time + processing_times[job - 1, 0]
+        current_time = completion_times[job - 1, 0]
+
+    # Get the remaining compeletion times
+    for machine in machines[1:]:
+        machine -= 1
+
+        for j in range(len(schedule)):
+            job = int(schedule[machine, j])
+
+            if j == 0:
+                C = completion_times[job - 1, machine - 1]
+            else:
+                C = np.max([completion_times[int(schedule[machine, j - 1] - 1), machine], completion_times[job - 1, machine - 1]])
+
+            completion_times[job - 1, machine] = C + processing_times[job - 1, machine]
+
+    # Append job schedule to DataFrame
+    start_times = completion_times - processing_times
+    data  = pd.DataFrame({'Job ID': [i for i in range(1, num_jobs + 1)]})
+
+    for m in machines:
+        data[f'Start time machine {m}'] = start_times[:, m - 1]
+        data[f'Completion time machine {m}'] = completion_times[:, m - 1]
+    
+    data = data.sort_values(by='Job ID')
+    return data
 
 def calculateScore(schedule, machines, release_dates, due_dates, weights, processing_times):
     '''
@@ -282,11 +331,11 @@ if __name__ == "__main__":
     data = readInput('data/job_data2.xlsx')
 
     start = time.time()
-    scores, score, schedule = runAlgorithmGenO(data, npop = 10, gens = 1000)
+    df, min_score, exact_time, best_scores, best_schedule = runAlgorithmGenO(data, npop = 10, gens = 1000)
     end = time.time()
 
-    print('Schedule:\n', schedule)
-    print('Score:', score)
+    print('Schedule:\n', best_schedule)
+    print('Score:', min_score)
     print('Runtime:', end - start)
 
-    print('List of scores:', scores)
+    print('List of scores:', best_scores)
