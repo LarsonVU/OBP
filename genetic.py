@@ -267,12 +267,12 @@ def mutatateSchedule(schedule):
     job = schedule[index1]
 
     # Remove the job from the schedule
-    schedule = np.delete(schedule, index1)
+    new_schedule = np.delete(schedule, index1)
 
     # Place it back at the new index
-    schedule = np.insert(schedule, index2, job)
+    new_schedule = np.insert(new_schedule, index2, job)
 
-    return schedule
+    return new_schedule
 
 def getProbabilitites(scores):
     '''
@@ -299,10 +299,10 @@ def getProbabilitites(scores):
     return probs
 
 if __name__ == "__main__":
-    data = readInput('data/overtake_example.xlsx')
+    data = readInput('data/job_data3.xlsx')
 
     start = time.time()
-    best_schedule, min_score, exact_time, best_scores, df = runAlgorithmGen(data, npop = 10, gens = 100)
+    df, min_score, exact_time, best_scores, best_schedule = runAlgorithmGen(data, npop = 10, gens = 1000)
     end = time.time()
 
     print('Schedule:\n', best_schedule)
@@ -310,7 +310,6 @@ if __name__ == "__main__":
     print('Runtime:', end - start)
 
     print('List of scores:', best_scores)
-    print(df)
 
 # npop = 10
 # gens = 100

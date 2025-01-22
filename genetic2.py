@@ -1,7 +1,6 @@
 import numpy as np
 import pandas as pd
 import time
-from genetic2 import runAlgorithmGen
 
 def readInput(excel_file_path):
     '''
@@ -22,7 +21,7 @@ def readInput(excel_file_path):
     data = pd.read_excel(excel_file_path)
     return data
 
-def runAlgorithmGenO(data, npop = 10, gens = 100):
+def runAlgorithmGen(data, npop = 10, gens = 100):
     '''
     An a genetic programming algorithm to solve the permutation flowshop scheduling
     problem with release dates and total weighted tardiness as a objective function.
@@ -40,6 +39,8 @@ def runAlgorithmGenO(data, npop = 10, gens = 100):
     - schedule -> the best schedule that the algorithm found
     - score -> the score of the best schedule
     '''
+    #start the timer
+    start_time = time.time()
 
     # Read the data from the dataframe
     job_ids = np.array(data.job_id)
@@ -56,16 +57,10 @@ def runAlgorithmGenO(data, npop = 10, gens = 100):
     machines = np.arange(1, num_machines + 1)
 
     # Generate random schedules
-    schedules = generateRandomSchedules(num_jobs, num_machines, npop)
-
-    # schedules = np.zeros((npop, num_machines, num_jobs))
-    # init_schedules = runAlgorithmGen(data, npop, 1000)
-    
-    # for i in range(npop):
-    #     schedules[i] = np.tile(init_schedules[i], (num_machines, 1))
+    schedules = generateRandomSchedules(num_jobs, npop)
 
     # Initialize an array for new schedules
-    new_schedules = np.zeros_like(schedules)
+    new_schedules = np.zeros((npop, num_jobs), dtype = int)
 
     # Initialize array to store the best score of each generation
     best_scores = np.zeros(gens)
@@ -82,7 +77,7 @@ def runAlgorithmGenO(data, npop = 10, gens = 100):
 
         # Stop if one of the schedules has 0 delay
         if np.min(scores) == 0:
-            return 0, schedules[np.argmin(scores)]
+            break #return 0, schedules[np.argmin(scores)]
         
         # Generate new schedules
         for i in range(npop - 1):
@@ -92,7 +87,6 @@ def runAlgorithmGenO(data, npop = 10, gens = 100):
 
             # Perform the crossover between the two parent schedules
             schedule = crossoverSchedules(schedules[s1], schedules[s2])
-            #schedule = schedules[s1].copy()
 
             # Perform a mutation and add to the new schedules
             new_schedules[i] = mutatateSchedule(schedule)
@@ -115,8 +109,53 @@ def runAlgorithmGenO(data, npop = 10, gens = 100):
 
     # Get the best schedule
     best_schedule = schedules[np.argmin(scores)]
+    best_schedule_df = scheduleToDf(best_schedule, machines, release_dates, processing_times)
+    # Get the exact time
+    exact_time = time.time() - start_time
 
-    return best_scores, min_score, best_schedule
+    return schedules
+    return best_schedule_df, min_score, exact_time, best_scores, best_schedule 
+
+def scheduleToDf(schedule, machines, release_dates, processing_times):
+
+    # Initialize completion times array
+    num_jobs = len(schedule)
+    completion_times = np.zeros_like(processing_times, dtype=int)
+    current_time = 0
+
+    # Get the completion times of all jobs on the first machine
+    for job in schedule:
+        if release_dates[job - 1] > current_time:
+            current_time = release_dates[job - 1]
+
+        completion_times[job - 1, 0] = current_time + processing_times[job - 1, 0]
+        current_time = completion_times[job - 1, 0]
+
+    # Get the remaining compeletion times
+    for machine in machines[1:]:
+        machine -= 1
+
+        for j in range(len(schedule)):
+            job = schedule[j]
+
+            if j == 0:
+                C = completion_times[job - 1, machine - 1]
+            else:
+                C = np.max([completion_times[schedule[j - 1] - 1, machine], completion_times[job - 1, machine - 1]])
+
+            completion_times[job - 1, machine] = C + processing_times[job - 1, machine]
+
+    # Append job schedule to DataFrame
+    start_times = completion_times - processing_times
+    data  = pd.DataFrame({'Job ID': [i for i in range(1, num_jobs + 1)]})
+
+    for m in machines:
+        data[f'Start time machine {m}'] = start_times[:, m - 1]
+        data[f'Completion time machine {m}'] = completion_times[:, m - 1]
+    
+    data = data.sort_values(by='Job ID')
+    return data
+
 
 def calculateScore(schedule, machines, release_dates, due_dates, weights, processing_times):
     '''
@@ -139,9 +178,7 @@ def calculateScore(schedule, machines, release_dates, due_dates, weights, proces
     current_time = 0
 
     # Get the completion times of all jobs on the first machine
-    for job in schedule[0]:
-        job = int(job)
-
+    for job in schedule:
         if release_dates[job - 1] > current_time:
             current_time = release_dates[job - 1]
 
@@ -152,13 +189,13 @@ def calculateScore(schedule, machines, release_dates, due_dates, weights, proces
     for machine in machines[1:]:
         machine -= 1
 
-        for j in range(len(schedule[machine])):
-            job = int(schedule[machine ,j])
+        for j in range(len(schedule)):
+            job = schedule[j]
 
             if j == 0:
                 C = completion_times[job - 1, machine - 1]
             else:
-                C = np.max([completion_times[int(schedule[machine, j - 1] - 1), machine], completion_times[job - 1, machine - 1]])
+                C = np.max([completion_times[schedule[j - 1] - 1, machine], completion_times[job - 1, machine - 1]])
 
             completion_times[job - 1, machine] = C + processing_times[job - 1, machine]
 
@@ -170,7 +207,7 @@ def calculateScore(schedule, machines, release_dates, due_dates, weights, proces
 
     return score
 
-def generateRandomSchedules(num_jobs, num_machines, num_schedules):
+def generateRandomSchedules(num_jobs, num_schedules):
     '''
     A function that creates num_schedules random schedules, each containing num_jobs jobs.
 
@@ -179,15 +216,8 @@ def generateRandomSchedules(num_jobs, num_machines, num_schedules):
     - num_schedules -> the number of schedules that need to be generated
     '''
 
-    # Initialize random schedules
-    schedules = np.zeros((num_schedules, num_machines, num_jobs))
-
-    # Generate the random schedules'
-    for i in range(num_schedules):
-        schedule = np.random.permutation(num_jobs) + 1
-        schedule = np.tile(schedule, (num_machines, 1))
-
-        schedules[i] = schedule
+    # Generate the random schedules
+    schedules = np.array([np.random.permutation(num_jobs) + 1 for _ in range(num_schedules)])
 
     return schedules
 
@@ -200,29 +230,22 @@ def crossoverSchedules(schedule1, schedule2):
     - schedule2 -> an array containing the order in which jobs are processed
     '''
 
-    # new_schedule = schedule1.copy()
+    # Sample two random points in the schedule
+    points = np.random.choice(np.arange(0, len(schedule1) + 1), 2)
 
-    # m, n = schedule1.shape
-    # points = np.random.choice(n + 1, 2)
-    # machine = np.random.choice(m)
+    # Set point1 to the lowest point and point2 to the highest
+    point1 = np.min(points)
+    point2 = np.max(points)
 
-    # point1 = np.min(points)
-    # point2 = np.max(points)
+    # Get the jobs between the two points
+    missing_jobs = set(schedule1[point1:point2])
 
-    # for m in range(machine, m):
-    #     missing_jobs = set(schedule1[m, point1:point2])
+    # Get the order in which these jobs appear in schedule2
+    new = np.array([x for x in schedule2 if x in missing_jobs])
 
-    #     new = np.array([x for x in schedule2[m] if x in missing_jobs])
-
-    #     new_schedule[m] = np.concatenate([schedule1[m, :point1], new, schedule1[m, point2:]])
-
-    # Sample random point
-    m = schedule1.shape[0]
-    index = np.random.choice(m)
-
-    # Combine schedule
-    new_schedule = schedule1.copy()
-    new_schedule[index:] = schedule2[index:]
+    # Combine the part outside of the two points in schedule1 with the order
+    # in which the missing jobs appear in schedule 2
+    new_schedule = np.concatenate([schedule1[:point1], new, schedule1[point2:]])
 
     return new_schedule
 
@@ -237,20 +260,18 @@ def mutatateSchedule(schedule):
     - schedule -> an array containing the mutated order in which jobs are processed
     '''
     
-    m, n = schedule.shape
-    job = np.random.choice(n) + 1
-    machine = np.random.choice(m)
+    # Sample 2 random indices: index1 is the index of the job,
+    # index2 is where this job will be placed
+    index1, index2 = np.random.choice(np.arange(0, len(schedule)), 2, replace=False)
 
-    indices = np.where(schedule == job)[1]
-    new_index = np.random.choice(n)
-    
-    new_schedule = schedule.copy()
+    # Get the job
+    job = schedule[index1]
 
-    for i in range(machine, m):
-        part = np.delete(new_schedule[i], indices[i])
-        part = np.insert(part, new_index, job)
+    # Remove the job from the schedule
+    new_schedule = np.delete(schedule, index1)
 
-        new_schedule[i] = part
+    # Place it back at the new index
+    new_schedule = np.insert(new_schedule, index2, job)
 
     return new_schedule
 
@@ -279,14 +300,23 @@ def getProbabilitites(scores):
     return probs
 
 if __name__ == "__main__":
-    data = readInput('data/job_data2.xlsx')
+    data = readInput('data/job_data4.xlsx')
 
     start = time.time()
-    scores, score, schedule = runAlgorithmGenO(data, npop = 10, gens = 1000)
+    df, min_score, exact_time, best_scores, best_schedule = runAlgorithmGen(data, npop = 10, gens = 100)
     end = time.time()
 
-    print('Schedule:\n', schedule)
-    print('Score:', score)
+    print('Schedule:\n', best_schedule)
+    print('Score:', min_score)
     print('Runtime:', end - start)
 
-    print('List of scores:', scores)
+    print('List of scores:', best_scores)
+
+# npop = 10
+# gens = 100
+# data = readInput('data/job_data6.xlsx')
+# start = time.time()
+# print(runAlgorithmGen(data, npop, gens))
+# end = time.time()
+
+# print(end-start)
