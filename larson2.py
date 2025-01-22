@@ -782,7 +782,7 @@ def create_secondary_gantt_chart(schedule_df, due_dates, highlight_job_id=None):
             x=[due_dates.loc[index], due_dates.loc[index]],
             y=[row['Job ID'] - 0.4, row['Job ID'] + 0.4],
             mode="lines",
-            line=dict(color="#d6a419", width=3),
+            line=dict(color="#39FF14", width=3),
             name=f"Due Date {int(row['Job ID'])}",
             showlegend=(index == 0),  # Show legend only once
             hoverinfo="text",

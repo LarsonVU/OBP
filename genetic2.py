@@ -113,7 +113,6 @@ def runAlgorithmGen(data, npop = 10, gens = 100):
     # Get the exact time
     exact_time = time.time() - start_time
 
-    return schedules
     return best_schedule_df, min_score, exact_time, best_scores, best_schedule 
 
 def scheduleToDf(schedule, machines, release_dates, processing_times):
