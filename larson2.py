@@ -661,7 +661,7 @@ def run_specified_algorithm(n_clicks, max_runtime, pop_size, algorithm_type, ove
 
     if algorithm_type == 2:
         if not overtake:
-            schedule, score, runtime, _, _ = gen_o.runAlgorithmGen(data, pop_size, max_runtime)
+            schedule, score, runtime, _, _ = gen_o.runAlgorithmGenO(data, pop_size, max_runtime)
         else:
             schedule, score, runtime, _, _ = gen.runAlgorithmGen(data, pop_size, max_runtime)
     else:

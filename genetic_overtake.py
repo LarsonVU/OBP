@@ -1,7 +1,6 @@
 import numpy as np
 import pandas as pd
 import time
-from genetic2 import runAlgorithmGen
 
 def readInput(excel_file_path):
     '''
@@ -132,6 +131,7 @@ def scheduleToDf(schedule, machines, release_dates, processing_times):
     completion_times = np.zeros_like(processing_times, dtype=int)
     current_time = 0
 
+
     # Get the completion times of all jobs on the first machine
     for job in schedule[0]:
         job = int(job)
@@ -146,8 +146,8 @@ def scheduleToDf(schedule, machines, release_dates, processing_times):
     for machine in machines[1:]:
         machine -= 1
 
-        for j in range(len(schedule)):
-            job = int(schedule[machine, j])
+        for j in range(len(schedule[machine])):
+            job = int(schedule[machine ,j])
 
             if j == 0:
                 C = completion_times[job - 1, machine - 1]
@@ -328,7 +328,7 @@ def getProbabilitites(scores):
     return probs
 
 if __name__ == "__main__":
-    data = readInput('data/job_data2.xlsx')
+    data = readInput('data/overtake_example.xlsx')
 
     start = time.time()
     df, min_score, exact_time, best_scores, best_schedule = runAlgorithmGenO(data, npop = 10, gens = 1000)
