@@ -84,3 +84,49 @@
     background-color: var(--nav-color) !important;
     color: var(--knoppen-blauw) !important;
 }
+
+
+
+/* Style for dbc.Checklist container */
+.checklist-container {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin: 20px auto;
+    padding: 15px;
+    background-color: var(--background-color);
+    border: 1px solid #dcdcdc;
+    border-radius: 5px;
+    font-family: "montserrat", sans-serif;
+}
+
+/* Style for selected checklist items */
+.checklist-item-selected {
+    background-color: var(--knoppen-blauw);
+    color: #FFFFFF;
+    padding: 10px;
+    border-radius: 5px;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+/* Style for unselected checklist items */
+.checklist-item-unselected {
+    background-color: #FFFFFF;
+    color: #333333;
+    padding: 10px;
+    border: 1px solid #dcdcdc;
+    border-radius: 5px;
+    font-size: 16px;
+    font-weight: normal;
+    cursor: pointer;
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* Style for checklist hover effect */
+.checklist-item-unselected:hover {
+    background-color: var(--nav-color);
+    color: var(--knoppen-blauw);
+}

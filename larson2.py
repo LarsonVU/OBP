@@ -4,35 +4,13 @@ import pandas as pd
 import base64
 import io
 import plotly.express as px
-import ilp_overtake as ilp
+import ilp_algorithm as ilp
+import ilp_overtake as ilp_o
 import plotly.graph_objects as go
 import genetic as gen
+import genetic_overtake as gen_o
 from plotly.colors import n_colors
 import dash
-
-
-
-# TO DO Lijst tool:
-# File
-# Lege tabel laden aan het begin
-# Job ID moet uniek zijn en laden bij add row (en als je job id 1,2,4 moet werken read input dingetje (lex zijn probleem))
-
-# Algorithm settings
-# Algorithm status needs to be expanded:
-# 	Needs to look nicer
-# 	Needs to add current score
-# 	Needs to add remaining time
-# 	Maybe a wheel?
-# When returning to the algorithm settings after running the page should keep loading
-# No buttons should be able to be pressed when algorithm is running
-
-# Graphs Section
-# Graph depicting path of score over time 
-# the percentage gap should be displayed or it should say optimal
-
-
-# Algemeen, code iets cleaner (maar ja boeie)
-
 
 # Initialize the app
 app = Dash(__name__, external_stylesheets=[
@@ -442,7 +420,7 @@ def algorithm_settings_layout():
                     "However, finding a reasonable solution takes more time. One can determine the maximum run time in seconds by filling in the parameter.",
                     className="mb-0", id="algorithm-description"
                 ) ,             style={
-        "height": "90px",  # Fixed height
+        "height": "120px",  # Fixed height
         "overflow": "hidden",  # Hide overflowing text
         "textOverflow": "ellipsis",  # Add ellipsis if text overflows
         }
@@ -466,6 +444,16 @@ def algorithm_settings_layout():
                         width=6, id="parameters"
                     )
 
+    allow_overtake_check = dcc.Checklist(
+            id="overtake-checklist",
+            options=[
+                {"label": "Disable Overtake", "value": "disable"}
+            ],
+            inputClassName="checklist-item-unselected",
+            labelClassName="checklist-item-unselected",
+        )
+
+
 
     return html.Div(
         [
@@ -486,6 +474,7 @@ def algorithm_settings_layout():
                                 value=1,
                                 style={"display": "inline-block", "margin": "0px 0px 0px 0px", },
                             )),
+                            dbc.Row(allow_overtake_check),
                         ],
                         width=4,
                     align="stretch",), 
@@ -655,9 +644,10 @@ def enter_max_runtime_value(n_clicks, max_runtime, pop_size):
     State('max-runtime', 'value'),
     State('population-size', 'value'),
     State('algorithm-type', 'value'),
+    State('overtake-checklist', 'value'),
     prevent_initial_call=True
 )
-def run_specified_algorithm(n_clicks, max_runtime, pop_size, algorithm_type):
+def run_specified_algorithm(n_clicks, max_runtime, pop_size, algorithm_type, overtake):
     data = app.layout.df.copy()
     columns = ['job_id', 'release_date', 'due_date', 'weight'] + \
         [f"st_{i+1}" for i in range(len(data.columns)-4)]
@@ -670,9 +660,15 @@ def run_specified_algorithm(n_clicks, max_runtime, pop_size, algorithm_type):
         pop_size = 10
 
     if algorithm_type == 2:
-        schedule, score, runtime, _, _ = gen.runAlgorithmGen(data, pop_size, max_runtime)
+        if not overtake:
+            schedule, score, runtime, _, _ = gen_o.runAlgorithmGen(data, pop_size, max_runtime)
+        else:
+            schedule, score, runtime, _, _ = gen.runAlgorithmGen(data, pop_size, max_runtime)
     else:
-        schedule, score, runtime = ilp.runAlgorithm(data, max_runtime)
+        if not overtake:
+            schedule, score, runtime = ilp_o.runAlgorithm(data, max_runtime)
+        else: 
+            schedule, score, runtime = ilp.runAlgorithm(data, max_runtime)
 
     app.layout.schedule_df = schedule
     app.layout.schedule_stats = (score, runtime)
@@ -751,7 +747,7 @@ def create_gannt_chart(schedule_df, highlight_job_id=None):
     return fig
 
 
-def create_secondary_gantt_chart(schedule_df, highlight_job_id=None):
+def create_secondary_gantt_chart(schedule_df, due_dates, highlight_job_id=None):
     fig = go.Figure()
 
     machines = int((len(schedule_df.columns) - 1) / 2)
@@ -780,13 +776,27 @@ def create_secondary_gantt_chart(schedule_df, highlight_job_id=None):
                 showlegend=False
             ))
 
+    # Add due date lines for each job
+    for index, row in schedule_df.iterrows():
+        fig.add_trace(go.Scatter(
+            x=[due_dates.loc[index], due_dates.loc[index]],
+            y=[row['Job ID'] - 0.4, row['Job ID'] + 0.4],
+            mode="lines",
+            line=dict(color="#d6a419", width=3),
+            name=f"Due Date {int(row['Job ID'])}",
+            showlegend=(index == 0),  # Show legend only once
+            hoverinfo="text",
+            hovertext=f"Due Date for Job {int(row['Job ID'])}: {due_dates.loc[index]}",
+        ))
+
+    # Add legend for machines
     for job_id, color in enumerate(machine_colors):
         fig.add_trace(go.Scatter(
-        x=[None], y=[None],
-        mode='markers',
-        marker=dict(size=10, color=color),
-        name=f"Machine {job_id +1}",
-    ))
+            x=[None], y=[None],
+            mode='markers',
+            marker=dict(size=10, color=color),
+            name=f"Machine {job_id + 1}",
+        ))
 
 
     fig.update_layout(
@@ -805,7 +815,6 @@ def create_secondary_gantt_chart(schedule_df, highlight_job_id=None):
         ),
         showlegend=False,
     )
-
 
     return fig
 
@@ -882,7 +891,7 @@ def graphs_layout():
 
         schedule_graph2 = dcc.Graph(
             id="schedule-graph2",
-            figure=create_secondary_gantt_chart(initial_jobs),
+            figure=create_secondary_gantt_chart(initial_jobs, app.layout.df["Due Date"]),
             config={
                 'staticPlot': False,  # Enable interactions
                 'scrollZoom': True,   # Enable scrolling
@@ -949,7 +958,7 @@ def update_graphs(selected_page):
     end_idx = start_idx + app.layout.jobs_per_page
     page_jobs = app.layout.schedule_df.iloc[start_idx:end_idx]
 
-    return create_secondary_gantt_chart(page_jobs), {"display" : None}
+    return create_secondary_gantt_chart(page_jobs, app.layout.df["Due Date"]), {"display" : None}
 
 
 @app.callback(
