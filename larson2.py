@@ -417,7 +417,8 @@ def algorithm_settings_layout():
             dbc.CardBody(
                 html.P(
                     "The integer linear program (ILP) will find the optimal solution given sufficient time. "
-                    "However, finding a reasonable solution takes more time. One can determine the maximum run time in seconds by filling in the parameter.",
+                    "However, finding a reasonable solution might take more time, especially on larger instances. \
+                      One can determine the maximum run time in seconds by filling in the parameter.",
                     className="mb-0", id="algorithm-description"
                 ) ,             style={
         "height": "120px",  # Fixed height
@@ -447,10 +448,11 @@ def algorithm_settings_layout():
     allow_overtake_check = dcc.Checklist(
             id="overtake-checklist",
             options=[
-                {"label": "Disable Overtake", "value": "disable"}
+                {"label": " Disable Overtake", "value": "disable"}
             ],
             inputClassName="checklist-item-unselected",
             labelClassName="checklist-item-unselected",
+            style={"textAlign" : "center"}
         )
 
 
@@ -551,10 +553,13 @@ def algorithm_settings_layout():
               Input('algorithm-type', 'value'),
               prevent_initial_call=True)
 def update_parameters(algorithm_type):
-    ILP_description = "The integer linear program (ILP) will find the optimal solution given sufficient time. " \
-                        "However, finding a reasonable solution takes more time. One can enter the maximum run time in seconds below. "
-    Genetic_description = "The genetic algorithm will find a reasonable solution given sufficient time. " \
-                            "However, finding the optimal solution might take infinite generations. One can enter the maximum number of generations and population size per generation below. Increasing these values will increase the runtime."
+    ILP_description = "The integer linear program (ILP) will find the optimal solution given sufficient time. \
+                    However, finding a reasonable solution might take more time, especially on larger instances. \
+                      One can determine the maximum run time in seconds by filling in the parameter."
+    Genetic_description = "The genetic algorithm will find a reasonable solution given a sufficient number of generations and population size. " \
+                            "However, finding the optimal solution might take infinite generations. Additionally, the solution that the genetic \
+                            algorithm gives is inherently random. One can enter the maximum number of generations and population size per generation below.\
+                            Increasing these values will increase the runtime."
 
     ILP_parameters = dbc.Col(dbc.Row(
                         [
