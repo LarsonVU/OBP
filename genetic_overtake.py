@@ -81,6 +81,7 @@ def runAlgorithmGenO(data, npop = 10, gens = 100):
 
         # Get the probability that each schedule is chosen
         probs = getProbabilitites(scores)
+        probs = np.maximum(probs, 0) # Make sure that the probabilities are not negative
 
         # Stop if one of the schedules has 0 delay
         if np.min(scores) == 0:

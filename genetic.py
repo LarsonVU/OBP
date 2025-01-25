@@ -74,7 +74,7 @@ def runAlgorithmGen(data, npop = 10, gens = 100):
 
         # Get the probability that each schedule is chosen
         probs = getProbabilitites(scores)
-
+        probs  = np.maximum(probs, 0) # Minimum probability
         # Stop if one of the schedules has 0 delay
         if np.min(scores) == 0:
             break #return 0, schedules[np.argmin(scores)]
