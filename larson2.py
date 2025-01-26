@@ -367,7 +367,8 @@ def restore_data(n_clicks):
     [
         Output('output-data-upload', 'children', allow_duplicate=True),
         # Add output to modify button style
-        Output('add-row-btn', 'style', allow_duplicate=True)
+        Output('add-row-btn', 'style', allow_duplicate=True),
+        Output('enter-data-btn', 'style', allow_duplicate=True)
     ],
     Input('upload-data', 'contents'),
     State('upload-data', 'filename'),
@@ -423,11 +424,11 @@ def display_table(contents, filename):
                     row_deletable=True,
                     **table_layout
                 ),
-            ]),  button_style2["style"]
+            ]),  button_style2["style"], {"display": "none"}
         else:
-            return html.Div("Unsupported file type. Please upload an Excel file."), {"display": "none"}
+            return html.Div("Unsupported file type. Please upload an Excel file."), {"display": "none"}, {"display": "block"}
     except Exception as e:
-        return html.Div(f"There was an error processing the file: {str(e)}"), {"display": "none"}
+        return html.Div(f"There was an error processing the file: {str(e)}"), {"display": "none"}, {"display": "block"}
 
 
 @app.callback(
@@ -478,7 +479,7 @@ def algorithm_settings_layout():
             dbc.CardBody(
                 html.P(
                     "The integer linear program (ILP) will find the optimal solution given sufficient time. "
-                    "However, finding a reasonable solution might take more time, especially on larger instances. \
+                    "However, finding a reasonable solution might take more time, especially on larger instances. Running this algorithm on instances with more than 500 jobs is not recommended. \
                       One can determine the maximum run time in seconds by filling in the parameter.",
                     className="mb-0", id="algorithm-description"
                 ) ,             style={
@@ -615,7 +616,7 @@ def algorithm_settings_layout():
               prevent_initial_call=True)
 def update_parameters(algorithm_type):
     ILP_description = "The integer linear program (ILP) will find the optimal solution given sufficient time. \
-                    However, finding a reasonable solution might take more time, especially on larger instances. \
+                    However, finding a reasonable solution might take more time, especially on larger instances. Running this algorithm on instances with more than 500 jobs is not recommended. \
                       One can determine the maximum run time in seconds by filling in the parameter."
     Genetic_description = "The genetic algorithm will find a reasonable solution given a sufficient number of generations and population size. " \
                             "However, finding the optimal solution might take infinite generations. Additionally, the solution that the genetic \
@@ -850,7 +851,7 @@ def create_secondary_gantt_chart(schedule_df, due_dates, highlight_job_id=None):
             mode="lines",
             line=dict(color="#8B0000", width=6),
             name=f"Due Dates",
-            showlegend=(index == 0),  # Show legend only once
+            showlegend=(index % 10 == 0),  # Show legend only once
             hoverinfo="text",
             hovertext=f"Due Date for Job {int(row['Job ID'])}: {due_dates.loc[index]}",
         ))

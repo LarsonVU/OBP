@@ -85,7 +85,16 @@ def runAlgorithmGenO(data, npop = 10, gens = 100):
 
         # Stop if one of the schedules has 0 delay
         if np.min(scores) == 0:
-            return 0, schedules[np.argmin(scores)]
+            # Get the lowest score
+            min_score = np.min(scores)
+            # Get the best schedule
+            best_schedule = schedules[np.argmin(scores)]
+            best_schedule_df = scheduleToDf(best_schedule, machines, release_dates, processing_times)
+
+            # Get the exact time
+            exact_time = time.time() - start_time
+            best_scores = scores
+            return best_schedule_df, min_score, exact_time, best_scores, best_schedule 
         
         # Generate new schedules
         for i in range(npop - 1):
