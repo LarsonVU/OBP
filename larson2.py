@@ -145,7 +145,7 @@ sidebar = html.Div(
                 dbc.NavLink("File Input", href="/file-input", active="exact", style={
                             "color": "#FFF"}, n_clicks=0, id="file-input"),  # Change the color here
                 dbc.NavLink("Algorithm Settings", href="/algorithm-settings",
-                            active="exact", style={"color": "#FFF"}),
+                            active="exact", style={"color": "#FFF"},  n_clicks=0, id="alg-settings"),
                 dbc.NavLink("Graphs Section", href="/graphs",
                             active="exact", style={"color": "#FFF"}),
             ],
@@ -517,8 +517,6 @@ def algorithm_settings_layout():
             style={"textAlign" : "center"}
         )
 
-
-
     return html.Div(
         [
             html.H3("Algorithm Settings", className="custom-h3 text-center mb-4"),
@@ -608,6 +606,28 @@ def algorithm_settings_layout():
             dbc.Row([dbc.Col(html.Div("", id='results-table') ,width =12)])
         ]
     )
+
+
+
+@app.callback(Output("btn-algorithm-output", "style"),
+             Output("show-vis-btn", "style"),
+             Output("results-table", "children"), 
+             Input("alg-settings", "n_clicks"),
+            )
+def restore_algorithm_settings(n_clicks):
+    sched_df = getattr(app.layout, 'schedule_df', None)
+    if sched_df is not None:
+        schedule_table =  dash_table.DataTable(
+            id="schedule-table",
+            columns=[{"name": col, "id": col, "deletable": False}
+                     for col in app.layout.schedule_df.columns],
+            data=app.layout.schedule_df.to_dict("records"),
+            # sort_action="native",  # Enables sorting by clicking column headers
+            **table_layout
+        )
+        return button_style1["style"], button_style1["style"], schedule_table
+    return {"display": "none"}, {"display": "none"}, html.Div("")
+
 
 
 @app.callback(Output('parameters', 'children'),
@@ -704,9 +724,9 @@ def enter_max_runtime_value(n_clicks, max_runtime, pop_size):
 
 @app.callback(
     Output('param-2', 'children', allow_duplicate=True),
-    Output('btn-algorithm-output', 'style'),
-    Output('show-vis-btn', 'style'),
-    Output('results-table', 'children'),
+    Output('btn-algorithm-output', 'style', allow_duplicate=True),
+    Output('show-vis-btn', 'style', allow_duplicate=True),
+    Output('results-table', 'children',allow_duplicate=True),
     Input('run-btn', 'n_clicks'),
     State('max-runtime', 'value'),
     State('population-size', 'value'),
