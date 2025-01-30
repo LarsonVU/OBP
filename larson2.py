@@ -11,13 +11,13 @@ import genetic as gen
 import genetic_overtake as gen_o
 from plotly.colors import n_colors
 import dash
+import os
 import numpy as np
 
 # Initialize the app
 app = Dash(__name__, external_stylesheets=[
            dbc.themes.BOOTSTRAP], suppress_callback_exceptions=True)
 app.title = "MS Tools"
-
 
 
 ## Define styles for tables and buttons
@@ -1098,5 +1098,10 @@ def toggle_sidebar(n_clicks, current_state):
 
 
 # Run the app
+local = False
 if __name__ == "__main__":
-    app.run_server(debug=True)
+    if local:
+        app.run_server(debug=True)
+    else:  
+        port = int(os.environ.get("PORT", 10000))  # Render assigns a PORT dynamically
+        app.run(host="0.0.0.0", port=port, debug=True)
