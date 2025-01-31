@@ -1,25 +1,7 @@
 import numpy as np
 import pandas as pd
 import time
-
-def readInput(excel_file_path):
-    '''
-    This function reads data from an excel file and returns it.
-
-    Input:
-    - excel_file_path -> path to the excel file containing the data in the following order:
-        - job_id
-        - release_date
-        - due_date
-        - weight
-        - st_1 <-> st_m (with m machines)
-
-    Output:
-    - data -> a pandas dataframe containing the data from the excel file
-    '''
-
-    data = pd.read_excel(excel_file_path)
-    return data
+from read_input import readInput
 
 def runAlgorithmGen(data, npop = 10, gens = 100):
     '''
@@ -33,13 +15,18 @@ def runAlgorithmGen(data, npop = 10, gens = 100):
         - due_date
         - weight
         - st_1 <-> st_m (with m machines)
-
+    - npop -> the size of each generation
+    - gens -> the number of generations
+        
     Output:
+    - best_schedule_df -> a datafame containing the starting times and completion times of all jobs on all machines
+    - min_score -> the score of the best schedule
+    - exact_time -> the time that the algorithm has ran for
     - best_scores -> the best score of each of the generations
-    - schedule -> the best schedule that the algorithm found
-    - score -> the score of the best schedule
+    - best_schedule -> the best schedule that the algorithm found
     '''
-    #start the timer
+
+    # Start the timer
     start_time = time.time()
 
     # Read the data from the dataframe
@@ -74,7 +61,7 @@ def runAlgorithmGen(data, npop = 10, gens = 100):
 
         # Get the probability that each schedule is chosen
         probs = getProbabilitites(scores)
-
+        probs  = np.maximum(probs, 0) # Minimum probability
         # Stop if one of the schedules has 0 delay
         if np.min(scores) == 0:
             break #return 0, schedules[np.argmin(scores)]
@@ -110,12 +97,26 @@ def runAlgorithmGen(data, npop = 10, gens = 100):
     # Get the best schedule
     best_schedule = schedules[np.argmin(scores)]
     best_schedule_df = scheduleToDf(best_schedule, machines, release_dates, processing_times)
+
     # Get the exact time
     exact_time = time.time() - start_time
 
     return best_schedule_df, min_score, exact_time, best_scores, best_schedule 
 
 def scheduleToDf(schedule, machines, release_dates, processing_times):
+    '''
+    A function that creates a dataframe containing information about the starting
+    times and completion times of all jobs on all machine based on a schedule.
+
+    Input:
+    - schedule -> the schedule for which the dataframe needs to be computed
+    - machines -> an array containing all machines
+    - release_dates -> an array containing the release date of every job
+    - processing_times -> a matrix containg the processing time of every job on each machine
+
+    Output:
+    - dataframe -> a dataframe containing information regarding the starting and completion times for each job
+    '''
 
     # Initialize completion times array
     num_jobs = len(schedule)
@@ -152,8 +153,8 @@ def scheduleToDf(schedule, machines, release_dates, processing_times):
         data[f'Start time machine {m}'] = start_times[:, m - 1]
         data[f'Completion time machine {m}'] = completion_times[:, m - 1]
     
-    data = data.sort_values(by='Job ID')
-    return data
+    dataframe = data.sort_values(by='Job ID')
+    return dataframe
 
 
 def calculateScore(schedule, machines, release_dates, due_dates, weights, processing_times):
@@ -210,9 +211,12 @@ def generateRandomSchedules(num_jobs, num_schedules):
     '''
     A function that creates num_schedules random schedules, each containing num_jobs jobs.
 
-    input:
+    Input:
     - num_jobs -> the number of jobs in each schedule
     - num_schedules -> the number of schedules that need to be generated
+
+    Output:
+    - schedules -> an array containing num_schedules schedules of num_jobs long
     '''
 
     # Generate the random schedules
@@ -224,9 +228,12 @@ def crossoverSchedules(schedule1, schedule2):
     '''
     Combine two different schedules based on a two-point crossover technique to create a new schedule.
 
-    input:
+    Input:
     - schedule1 -> an array containing the order in which jobs are processed
     - schedule2 -> an array containing the order in which jobs are processed
+
+    Output:
+    - new_schedule -> the child schedule of schedule1 and schedule2 based on the 2-point crossover
     '''
 
     # Sample two random points in the schedule
@@ -252,11 +259,11 @@ def mutatateSchedule(schedule):
     '''
     This function performs one shift mutation to a schedule.
 
-    input:
+    Input:
     - schedule -> an array containing the order in which jobs are processed
 
-    output:
-    - schedule -> an array containing the mutated order in which jobs are processed
+    Output:
+    - new_schedule -> an array containing the mutated order in which jobs are processed
     '''
     
     # Sample 2 random indices: index1 is the index of the job,
@@ -280,10 +287,10 @@ def getProbabilitites(scores):
     being chosen based on their score. It uses the squared distance to
     the worst solution and normalizes that.
 
-    input:
+    Input:
     - scores -> an array that contains the score of each of the schedules
 
-    output:
+    Output:
     - probs -> the probabilities that each of the schedules is chosen
     '''
 
@@ -294,28 +301,24 @@ def getProbabilitites(scores):
     denominator = np.sum((worst_score - scores)**2)
 
     # Calculate the probabilities
-    probs = (worst_score - scores)**2 / denominator
+    if denominator != 0:
+        probs = (worst_score - scores)**2 / denominator
+    else:
+         probs = np.ones_like(scores) / np.shape(scores)
 
     return probs
 
+# Example usage
 if __name__ == "__main__":
-    data = readInput('data/job_data4.xlsx')
 
-    start = time.time()
+    # Read the data
+    data = readInput('data/overtake_example.xlsx')
+
+    # Run algorithm
     df, min_score, exact_time, best_scores, best_schedule = runAlgorithmGen(data, npop = 10, gens = 100)
-    end = time.time()
 
+    # Print results
     print('Schedule:\n', best_schedule)
     print('Score:', min_score)
-    print('Runtime:', end - start)
-
+    print('Runtime:', exact_time)
     print('List of scores:', best_scores)
-
-# npop = 10
-# gens = 100
-# data = readInput('data/job_data6.xlsx')
-# start = time.time()
-# print(runAlgorithmGen(data, npop, gens))
-# end = time.time()
-
-# print(end-start)

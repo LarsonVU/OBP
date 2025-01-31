@@ -1,25 +1,7 @@
 import numpy as np
 import pandas as pd
 from gurobipy import Model, GRB
-
-def readInput(excel_file_path):
-    '''
-    This function reads data from an excel file and returns it
-
-    Input:
-    - excel_file_path -> path to the excel file containing the data in the following order:
-        - job_id
-        - release_date
-        - due_date
-        - weight
-        - st_1 <-> st_m (with m machines)
-
-    Output:
-    - data -> a pandas dataframe containing the data from the excel file
-    '''
-
-    data = pd.read_excel(excel_file_path)
-    return data
+from read_input import readInput
 
 def runAlgorithm(data, max_runtime):
     '''
@@ -33,6 +15,7 @@ def runAlgorithm(data, max_runtime):
         - due_date
         - weight
         - st_1 <-> st_m (with m machines)
+    - max_runtime -> the maximum runtime of the algorithm
 
     Output:
     - schedule -> the final schedule that the algorithm decided on
@@ -48,8 +31,7 @@ def runAlgorithm(data, max_runtime):
     processing_times = np.array(data.iloc[:, 4:])
 
     # Get the number of jobs and number of machines
-    num_jobs = len(job_ids)
-    num_machines = processing_times.shape[1]
+    num_jobs, num_machines = processing_times.shape
 
     # Create an array containing an index for all of the machines 
     machines = np.arange(1, num_machines + 1)
@@ -114,16 +96,24 @@ def runAlgorithm(data, max_runtime):
 
         score = model.objVal
         return schedule, score, model.Runtime
+    
     else:
         print("No feasible solution found.")
         return None, None, None
 
 # Example usage
 if __name__ == "__main__":
+
+    # Read data
     data = readInput('data/overtake_example.xlsx')
     
+    # Set maximum runtime
     MAX_RUNTIME = 30
+
+    # Run algorithm
     schedule, score, runtime = runAlgorithm(data, MAX_RUNTIME)
+
+    # Print results
     print("Schedule:\n", schedule)
     print("Score:", score)
     print("Runtime:", runtime)

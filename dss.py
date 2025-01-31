@@ -4,10 +4,10 @@ import pandas as pd
 import base64
 import io
 import plotly.express as px
-import ilp_algorithm as ilp
+import ilp_no_overtake as ilp
 import ilp_overtake as ilp_o
 import plotly.graph_objects as go
-import genetic as gen
+import genetic_no_overtake as gen
 import genetic_overtake as gen_o
 from plotly.colors import n_colors
 import dash
