@@ -1106,7 +1106,7 @@ def toggle_sidebar(n_clicks, current_state):
 
 
 # Run the app
-local = False
+local = True
 if __name__ == "__main__":
     if local:
         app.run_server(debug=False)
