@@ -4,41 +4,20 @@ import pandas as pd
 import base64
 import io
 import plotly.express as px
-import ilp_overtake as ilp
+import ilp_no_overtake as ilp
+import ilp_overtake as ilp_o
 import plotly.graph_objects as go
-import genetic as gen
+import genetic_no_overtake as gen
+import genetic_overtake as gen_o
 from plotly.colors import n_colors
 import dash
-
-
-
-# TO DO Lijst tool:
-# File
-# Lege tabel laden aan het begin
-# Job ID moet uniek zijn en laden bij add row (en als je job id 1,2,4 moet werken read input dingetje (lex zijn probleem))
-
-# Algorithm settings
-# Algorithm status needs to be expanded:
-# 	Needs to look nicer
-# 	Needs to add current score
-# 	Needs to add remaining time
-# 	Maybe a wheel?
-# When returning to the algorithm settings after running the page should keep loading
-# No buttons should be able to be pressed when algorithm is running
-
-# Graphs Section
-# Graph depicting path of score over time 
-# the percentage gap should be displayed or it should say optimal
-
-
-# Algemeen, code iets cleaner (maar ja boeie)
-
+import os
+import numpy as np
 
 # Initialize the app
 app = Dash(__name__, external_stylesheets=[
            dbc.themes.BOOTSTRAP], suppress_callback_exceptions=True)
 app.title = "MS Tools"
-
 
 
 ## Define styles for tables and buttons
@@ -166,7 +145,7 @@ sidebar = html.Div(
                 dbc.NavLink("File Input", href="/file-input", active="exact", style={
                             "color": "#FFF"}, n_clicks=0, id="file-input"),  # Change the color here
                 dbc.NavLink("Algorithm Settings", href="/algorithm-settings",
-                            active="exact", style={"color": "#FFF"}),
+                            active="exact", style={"color": "#FFF"},  n_clicks=0, id="alg-settings"),
                 dbc.NavLink("Graphs Section", href="/graphs",
                             active="exact", style={"color": "#FFF"}),
             ],
@@ -214,6 +193,10 @@ app.layout = html.Div(
 )
 app.layout.total_pages = 1
 app.layout.jobs_per_page = 10
+titles = ['Job ID', 'Release Date',
+                      'Due Date', 'Weight'] + [f"Process time {i+1}" for i in range(3)]
+app.layout.df = pd.DataFrame(0, index=range(5), columns=titles)
+app.layout.df['Job ID'] = [i+1 for i in range(5)] 
 
 # Callbacks to handle page navigation
 
@@ -263,6 +246,24 @@ def file_input_layout():
 
             html.Div(id='output-data-upload'),
             html.Button(
+                            "Enter data manually", 
+                            id='enter-data-btn',
+                            n_clicks=0,
+                            style={  # Add custom style
+                                "margin": "20px auto",
+                                "backgroundColor": "var(--knoppen-blauw)",  # Button background color
+                                "color": "#FFFFFF",  # Button text color
+                                "border": "none",  # No border
+                                "padding": "10px 20px",  # Padding inside the button
+                                "borderRadius": "5px",  # Rounded corners
+                                "fontSize": "16px",  # Font size
+                                "fontWeight": "bold",  # Bold text
+                                "fontFamily": "montserrat, sans-serif",  # Font family
+                                "cursor": "pointer",  # Pointer cursor on hover
+                                "transition": "background-color 0.3s ease",  # Smooth hover transition
+                            }
+                        ),
+            html.Button(
                 "Add Row",
                 id="add-row-btn",
                 n_clicks=0,
@@ -295,23 +296,49 @@ def file_input_layout():
     )
 
 
+@app.callback(Output('output-data-upload', 'children',  allow_duplicate=True),
+              Output('add-row-btn', 'style', allow_duplicate=True),
+              Output('enter-data-btn', 'style', allow_duplicate=True),
+              Input('enter-data-btn', 'n_clicks'),
+              prevent_initial_call=True)
+def enter_data(n_clicks):
+    app.layout.df = pd.DataFrame(0, index=range(5), columns=titles)
+    app.layout.df['Job ID'] = [i+1 for i in range(5)] 
+    return html.Div([html.Div(
+                    dbc.Button(
+                        "Submit Data",
+                        id="submit-data-btn",
+                        href="/algorithm-settings",  # Link to the algorithm settings page
+                        style={"textAlign": "center",} | button_style1["style"]
+                    ), style={"display": "flex", "justifyContent": "center", "alignItems": "center"},),
+            dash_table.DataTable(
+                id="sortable-table",
+                columns=[{"name": col, "id": col} for col in app.layout.df.columns],
+                data=app.layout.df.to_dict("records"),
+                sort_action="native",
+                editable=True,
+                row_deletable=True,
+                **table_layout
+            )
+        ]), button_style2["style"], {"display": "none"}
+
+
 @app.callback(
     Output('output-data-upload', 'children'),
     Output('add-row-btn', 'style'),
+    Output('enter-data-btn', 'style'),
     Input("file-input", "n_clicks"),
 )
 def restore_data(n_clicks):
     if n_clicks > 0 and app.layout.df is not None:
         df = app.layout.df
-        return html.Div([dcc.Link(
+        return html.Div([html.Div(
                     dbc.Button(
                         "Submit Data",
                         id="submit-data-btn",
-                        **button_style1
-                    ),
-                    href="/algorithm-settings",  # Link to the algorithm settings page
-                    style={"textAlign": "center", "display": "block"}
-                ),
+                        href="/algorithm-settings",  # Link to the algorithm settings page
+                        style={"textAlign": "center",} | button_style1["style"]
+                    ), style={"display": "flex", "justifyContent": "center", "alignItems": "center"},),
             dash_table.DataTable(
                 id="sortable-table",
                 columns=[{"name": col, "id": col} for col in df.columns],
@@ -321,8 +348,20 @@ def restore_data(n_clicks):
                 row_deletable=True,
                 **table_layout
             )
-        ]), button_style2["style"]
-    return html.Div("", style={'textAlign': 'center', 'font-family': 'Roboto'}), {"display": "none"}
+        ]), button_style2["style"],  {"display": "none"}
+    return html.Div("", style={'textAlign': 'center', 'font-family': 'Roboto'}), {"display": "none"}, {  # Add custom style
+                                "margin": "20px auto",
+                                "backgroundColor": "var(--knoppen-blauw)",  # Button background color
+                                "color": "#FFFFFF",  # Button text color
+                                "border": "none",  # No border
+                                "padding": "10px 20px",  # Padding inside the button
+                                "borderRadius": "5px",  # Rounded corners
+                                "fontSize": "16px",  # Font size
+                                "fontWeight": "bold",  # Bold text
+                                "fontFamily": "montserrat, sans-serif",  # Font family
+                                "cursor": "pointer",  # Pointer cursor on hover
+                                "transition": "background-color 0.3s ease",  # Smooth hover transition
+                            }
 
 
 # Callback to parse and display the uploaded file
@@ -330,7 +369,8 @@ def restore_data(n_clicks):
     [
         Output('output-data-upload', 'children', allow_duplicate=True),
         # Add output to modify button style
-        Output('add-row-btn', 'style', allow_duplicate=True)
+        Output('add-row-btn', 'style', allow_duplicate=True),
+        Output('enter-data-btn', 'style', allow_duplicate=True)
     ],
     Input('upload-data', 'contents'),
     State('upload-data', 'filename'),
@@ -369,17 +409,13 @@ def display_table(contents, filename):
             app.layout.df = df  # Store the dataframe in the app layout
 
             # Return the data table and make the button visible
-            return html.Div([
-                dcc.Link(
+            return html.Div([html.Div(
                     dbc.Button(
                         "Submit Data",
                         id="submit-data-btn",
-                        **button_style1
-                    ),
-                    href="/algorithm-settings",  # Link to the algorithm settings page
-                    style={"textAlign": "center", "display": "block"}
-                ),
-
+                        href="/algorithm-settings",  # Link to the algorithm settings page
+                        style={"textAlign": "center",} | button_style1["style"]
+                    ), style={"display": "flex", "justifyContent": "center", "alignItems": "center"},),
                 dash_table.DataTable(
                     id="sortable-table",
                     columns=[{"name": col, "id": col, "deletable": False}
@@ -390,11 +426,11 @@ def display_table(contents, filename):
                     row_deletable=True,
                     **table_layout
                 ),
-            ]),  button_style2["style"]
+            ]),  button_style2["style"], {"display": "none"}
         else:
-            return html.Div("Unsupported file type. Please upload an Excel file."), {"display": "none"}
+            return html.Div("Unsupported file type. Please upload an Excel file."), {"display": "none"}, {"display": "block"}
     except Exception as e:
-        return html.Div(f"There was an error processing the file: {str(e)}"), {"display": "none"}
+        return html.Div(f"There was an error processing the file: {str(e)}"), {"display": "none"}, {"display": "block"}
 
 
 @app.callback(
@@ -403,8 +439,18 @@ def display_table(contents, filename):
     State('sortable-table', 'columns'),
     prevent_initial_call=True)
 def update_input_data(rows, columns):
+    default_value = 0  # Define the default value to replace faulty data
+    
     for i, row in enumerate(rows):
         row[columns[0]['name']] = i + 1  # Assuming the first column is Job ID
+        for col in columns:  # Validate each column value
+            try:
+                # Attempt to convert to int, if it's numeric data
+                row[col['name']] = int(row[col['name']])
+            except (ValueError, TypeError):
+                # If conversion fails, replace with default value
+                row[col['name']] = default_value
+                
     app.layout.df = pd.DataFrame(
         rows, columns=[col['name'] for col in columns]).astype(int)
     return rows # app.layout.df.iloc[-1]['Job ID']
@@ -424,14 +470,39 @@ def add_row(n_clicks, rows, columns):
 
     return rows
 
+@app.callback(Output('placeholder', 'children'),
+              Input('submit-data-btn', 'n_clicks'),)
+def reset_schedule(n_clicks):
+    app.layout.schedule_df = None
+    return html.Div("")
+
 
 def algorithm_settings_layout():
-    return html.Div(
+    algorithm_description = dbc.Col(
+    dbc.Card(
         [
-            html.H3("Algorithm Settings", className="custom-h3 text-center mb-4"),
-            dbc.Row(
-                [
-                    dbc.Col(
+            dbc.CardHeader(
+                html.Label("Algorithm Description:", className="fw-bold")
+            ),
+            dbc.CardBody(
+                html.P(
+                    "The integer linear program (ILP) will find the optimal solution given sufficient time. "
+                    "However, finding a reasonable solution might take more time, especially on larger instances. Running this algorithm on instances with more than 500 jobs is not recommended. \
+                      One can determine the maximum run time in seconds by filling in the parameter.",
+                    className="mb-0", id="algorithm-description"
+                ) ,             style={
+        "height": "115px",  # Fixed height
+        "overflow": "hidden",  # Hide overflowing text
+        "textOverflow": "ellipsis",  # Add ellipsis if text overflows
+        }
+            )
+,
+        ],
+        className="mt-2",
+    ),
+    width=8,
+)
+    parameter_input = dbc.Col([dbc.Row(
                         [
                             html.Label("Max Runtime:", className="mt-2 mb-2", id="parameter-label"),
                             dcc.Input(
@@ -440,28 +511,47 @@ def algorithm_settings_layout():
                                 placeholder="Enter value (default 100)",
                                 className="form-control",
                             ),
-                        ],
-                        width=4,
-                    ),
-                    dbc.Col(
+                        ]), dcc.Input(id="population-size", type="number", placeholder="Enter value (default 10)", className="form-control", style={"display": "none"})],
+                        width=6, id="parameters"
+                    )
+
+    allow_overtake_check = dcc.Checklist(
+            id="overtake-checklist",
+            options=[
+                {"label": " Disable Overtake", "value": "disable"}
+            ],
+            inputClassName="checklist-item-unselected",
+            labelClassName="checklist-item-unselected",
+            style={"textAlign" : "center"}
+        )
+
+    return html.Div(
+        [
+            html.H3("Algorithm Settings", className="custom-h3 text-center mb-4"),
+            dbc.Row([dbc.Col(
                         [ dbc.Row( html.Label("Choose Algorithm:", className="mt-2 mb-2", style={"display": "inline-block"})),
                           dbc.Row(  dbc.RadioItems(
                                 id="algorithm-type",
                                 className="radio-group",
-                                inline=True,
+                                #inline=True,
                                 inputClassName="btn-check",
-                                labelClassName="btn btn-outline-primary",
+                                labelClassName="btn btn-outline-primary w-100",
                                 labelCheckedClassName="active",
                                 options=[
                                     {"label": "ILP", "value": 1},
                                     {"label": "Genetic", "value": 2},
                                 ],
                                 value=1,
-                                style={"display": "inline-block", "margin": "0px 0px 0px 0px"},
+                                style={"display": "inline-block", "margin": "0px 0px 0px 0px", },
                             )),
+                            dbc.Row(allow_overtake_check),
                         ],
                         width=4,
-                    ),
+                    align="stretch",), 
+                    algorithm_description]),
+                dbc.Row(
+                [
+                    parameter_input,
                     dbc.Col(
                         [
                             html.Label("Algorithm Status:", className="mt-2 mb-2"),
@@ -478,10 +568,10 @@ def algorithm_settings_layout():
                             "Run Algorithm", 
                             id='run-btn',
                             color="primary", 
-                            className="mt-4", 
+                            className="mt-3", 
                             n_clicks=0,
                             style={  # Add custom style
-                                "margin": "0px 0",
+                                "margin": "20px 0",
                                 "backgroundColor": "var(--accent-color)",  # Button background color
                                 "color": "#FFFFFF",  # Button text color
                                 "border": "none",  # No border
@@ -526,47 +616,133 @@ def algorithm_settings_layout():
     )
 
 
-@app.callback(Output('parameter-label', 'children'),
-              Output('max-runtime', 'placeholder'),
+
+@app.callback(Output("btn-algorithm-output", "style"),
+             Output("show-vis-btn", "style"),
+             Output("results-table", "children"), 
+             Input("alg-settings", "n_clicks"),
+            )
+def restore_algorithm_settings(n_clicks):
+    sched_df = getattr(app.layout, 'schedule_df', None)
+    if sched_df is not None:
+        schedule_table =  dash_table.DataTable(
+            id="schedule-table",
+            columns=[{"name": col, "id": col, "deletable": False}
+                     for col in app.layout.schedule_df.columns],
+            data=app.layout.schedule_df.to_dict("records"),
+            # sort_action="native",  # Enables sorting by clicking column headers
+            **table_layout
+        )
+        return button_style1["style"], button_style1["style"], schedule_table
+    return {"display": "none"}, {"display": "none"}, html.Div("")
+
+
+
+@app.callback(Output('parameters', 'children'),
+              Output('algorithm-description', 'children'),
               Input('algorithm-type', 'value'),
               prevent_initial_call=True)
 def update_parameters(algorithm_type):
+    ILP_description = "The integer linear program (ILP) will find the optimal solution given sufficient time. \
+                    However, finding a reasonable solution might take more time, especially on larger instances. Running this algorithm on instances with more than 500 jobs is not recommended. \
+                      One can determine the maximum run time in seconds by filling in the parameter."
+    Genetic_description = "The genetic algorithm will find a reasonable solution given a sufficient number of generations and population size. " \
+                            "However, finding the optimal solution might take infinite generations. Additionally, the solution that the genetic \
+                            algorithm gives is inherently random. One can enter the maximum number of generations and population size per generation below.\
+                            Increasing these values will increase the runtime."
+
+    ILP_parameters = dbc.Col(dbc.Row(
+                        [
+                            html.Label("Max Runtime:", className="mt-2 mb-2", id="parameter-label"),
+                            dcc.Input(
+                                id="max-runtime",
+                                type="number",
+                                placeholder="Enter value (default 100)",
+                                className="form-control",
+                            ),
+                        dcc.Input(id="population-size", type="number", placeholder="Enter value (default 10)", className="form-control", style={"display": "none"})]),
+                    )
+
+    Genetic_parameters = dbc.Col(
+        dbc.Row(
+            [
+                dbc.Col(
+                    [
+                        html.Label("Max Generations:", className="mt-2 mb-2", id="parameter-label"),
+                        dcc.Input(
+                            id="max-runtime",
+                            type="number",
+                            placeholder="Enter value (default 100)",
+                            className="form-control",
+                        ),
+                    ],
+                    width=6,  # Adjust width to fit half of the row
+                ),
+                dbc.Col(
+                    [
+                        html.Label("Population Size:", className="mt-2 mb-2", id="parameter-label2"),
+                        dcc.Input(
+                            id="population-size",
+                            type="number",
+                            placeholder="Enter value (default 10)",
+                            className="form-control",
+                        ),
+                    ],
+                    width=6,  # Adjust width to fit half of the row
+                ),
+            ]
+        )
+    )
+
+
+
     if algorithm_type == 1:
-        return "Max Runtime:", "Enter value (default 100)"
+        return ILP_parameters, ILP_description
     else:
-        return "Max Generations:", "Enter value (default 100)"
+        return Genetic_parameters, Genetic_description
 
 
 @app.callback(Output('param-2', 'children'),
               Input('run-btn', 'n_clicks'),
               prevent_initial_call=True)
 def is_algorithm_running(n_clicks):
-    return f"Running"
+    return html.Div(
+            [
+                dbc.Spinner(size="sm", color="--knoppen-blauw"),
+                " Running",
+            ],
+        )#f"Running"
 
 
 @app.callback(
     Output('max-runtime', 'value'),
+    Output('population-size', 'value'),
     Input('run-btn', 'n_clicks'),
     State('max-runtime', 'value'),
+    State('population-size', 'value'),
     prevent_initial_call=True
 )
-def enter_max_runtime_value(n_clicks, max_runtime):
+def enter_max_runtime_value(n_clicks, max_runtime, pop_size):
     if max_runtime is None:
         max_runtime = 100
-    return max_runtime
+    if pop_size is None:
+        pop_size = 10
+    return max_runtime, pop_size
 
 
 @app.callback(
     Output('param-2', 'children', allow_duplicate=True),
-    Output('btn-algorithm-output', 'style'),
-    Output('show-vis-btn', 'style'),
-    Output('results-table', 'children'),
+    Output('btn-algorithm-output', 'style', allow_duplicate=True),
+    Output('show-vis-btn', 'style', allow_duplicate=True),
+    Output('results-table', 'children',allow_duplicate=True),
     Input('run-btn', 'n_clicks'),
     State('max-runtime', 'value'),
+    State('population-size', 'value'),
     State('algorithm-type', 'value'),
+    State('overtake-checklist', 'value'),
     prevent_initial_call=True
 )
-def run_specified_algorithm(n_clicks, max_runtime, algorithm_type):
+def run_specified_algorithm(n_clicks, max_runtime, pop_size, algorithm_type, overtake):
     data = app.layout.df.copy()
     columns = ['job_id', 'release_date', 'due_date', 'weight'] + \
         [f"st_{i+1}" for i in range(len(data.columns)-4)]
@@ -574,11 +750,20 @@ def run_specified_algorithm(n_clicks, max_runtime, algorithm_type):
 
     if max_runtime is None:
         max_runtime = 100
+    
+    if pop_size is None:
+        pop_size = 10
 
     if algorithm_type == 2:
-        schedule, score, runtime, _, _ = gen.runAlgorithmGen(data, 10, max_runtime)
+        if not overtake:
+            schedule, score, runtime, _, _ = gen_o.runAlgorithmGenO(data, pop_size, max_runtime)
+        else:
+            schedule, score, runtime, _, _ = gen.runAlgorithmGen(data, pop_size, max_runtime)
     else:
-        schedule, score, runtime = ilp.runAlgorithm(data, max_runtime)
+        if not overtake:
+            schedule, score, runtime = ilp_o.runAlgorithm(data, max_runtime)
+        else: 
+            schedule, score, runtime = ilp.runAlgorithm(data, max_runtime)
 
     app.layout.schedule_df = schedule
     app.layout.schedule_stats = (score, runtime)
@@ -657,7 +842,7 @@ def create_gannt_chart(schedule_df, highlight_job_id=None):
     return fig
 
 
-def create_secondary_gantt_chart(schedule_df, highlight_job_id=None):
+def create_secondary_gantt_chart(schedule_df, due_dates, highlight_job_id=None):
     fig = go.Figure()
 
     machines = int((len(schedule_df.columns) - 1) / 2)
@@ -686,13 +871,27 @@ def create_secondary_gantt_chart(schedule_df, highlight_job_id=None):
                 showlegend=False
             ))
 
+    # Add due date lines for each job
+    for index, row in schedule_df.iterrows():
+        fig.add_trace(go.Scatter(
+            x=[due_dates.loc[index], due_dates.loc[index]],
+            y=[row['Job ID'] - 0.4, row['Job ID'] + 0.4],
+            mode="lines",
+            line=dict(color="#8B0000", width=6),
+            name=f"Due Dates",
+            showlegend=(index % 10 == 0),  # Show legend only once
+            hoverinfo="text",
+            hovertext=f"Due Date for Job {int(row['Job ID'])}: {due_dates.loc[index]}",
+        ))
+
+    # Add legend for machines
     for job_id, color in enumerate(machine_colors):
         fig.add_trace(go.Scatter(
-        x=[None], y=[None],
-        mode='markers',
-        marker=dict(size=10, color=color),
-        name=f"Machine {job_id +1}",
-    ))
+            x=[None], y=[None],
+            mode='markers',
+            marker=dict(size=10, color=color),
+            name=f"Machine {job_id + 1}",
+        ))
 
 
     fig.update_layout(
@@ -709,9 +908,11 @@ def create_secondary_gantt_chart(schedule_df, highlight_job_id=None):
             dtick=1,
             fixedrange=True  # Enable zooming for detailed view
         ),
-        showlegend=False,
+        showlegend=True,
+        legend=dict(
+        itemclick=False,  # Disable click interactions
+        itemdoubleclick=False)  # Disable double-click interactions
     )
-
 
     return fig
 
@@ -788,7 +989,7 @@ def graphs_layout():
 
         schedule_graph2 = dcc.Graph(
             id="schedule-graph2",
-            figure=create_secondary_gantt_chart(initial_jobs),
+            figure=create_secondary_gantt_chart(initial_jobs, app.layout.df["Due Date"]),
             config={
                 'staticPlot': False,  # Enable interactions
                 'scrollZoom': True,   # Enable scrolling
@@ -855,7 +1056,7 @@ def update_graphs(selected_page):
     end_idx = start_idx + app.layout.jobs_per_page
     page_jobs = app.layout.schedule_df.iloc[start_idx:end_idx]
 
-    return create_secondary_gantt_chart(page_jobs), {"display" : None}
+    return create_secondary_gantt_chart(page_jobs, app.layout.df["Due Date"]), {"display" : None}
 
 
 @app.callback(
@@ -905,5 +1106,10 @@ def toggle_sidebar(n_clicks, current_state):
 
 
 # Run the app
+local = True
 if __name__ == "__main__":
-    app.run_server(debug=False)
+    if local:
+        app.run_server(debug=False)
+    else:  
+        port = int(os.environ.get("PORT", 10000))  # Render assigns a PORT dynamically
+        app.run(host="0.0.0.0", port=port, debug=False)
