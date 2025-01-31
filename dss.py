@@ -898,7 +898,6 @@ def run_specified_algorithm(n_clicks, max_runtime, pop_size, algorithm_type, ove
             columns=[{"name": col, "id": col, "deletable": False}
                      for col in app.layout.schedule_df.columns],
             data=app.layout.schedule_df.to_dict("records"),
-            # sort_action="native",  # Enables sorting by clicking column headers
             **table_layout
         )
 
@@ -911,10 +910,30 @@ def run_specified_algorithm(n_clicks, max_runtime, pop_size, algorithm_type, ove
     prevent_initial_call=True
 )
 def download_schedule(n_clicks):
+    '''
+    This function allows the user to download the solution as an excel file
+
+    Input:
+    - n_clicks: The number of clicks on the "Download Solution" button
+
+    Output:
+    - The Excel file containing the schedule sent to the user
+
+    '''
     return dcc.send_data_frame(app.layout.schedule_df.to_excel, "schedule.xlsx", sheet_name="schedule")
 
 
 def create_gannt_chart(schedule_df, highlight_job_id=None):
+    '''
+    This function creates a schedule chart per machine
+
+    Input:
+    - schedule_df: Dataframe containing a schedule of starting times and completion times
+    - A highlighted job which greys out others
+
+    Output:
+    - A gannt chart with possibly highlighted job
+    '''
     fig = go.Figure()
 
     machines = int((len(schedule_df.columns)-1)/2)
