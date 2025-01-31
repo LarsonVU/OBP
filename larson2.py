@@ -302,6 +302,8 @@ def file_input_layout():
               Input('enter-data-btn', 'n_clicks'),
               prevent_initial_call=True)
 def enter_data(n_clicks):
+    app.layout.df = pd.DataFrame(0, index=range(5), columns=titles)
+    app.layout.df['Job ID'] = [i+1 for i in range(5)] 
     return html.Div([html.Div(
                     dbc.Button(
                         "Submit Data",
@@ -467,6 +469,12 @@ def add_row(n_clicks, rows, columns):
     rows.append(new_row)  # Append the new row
 
     return rows
+
+@app.callback(Output('placeholder', 'children'),
+              Input('submit-data-btn', 'n_clicks'),)
+def reset_schedule(n_clicks):
+    app.layout.schedule_df = None
+    return html.Div("")
 
 
 def algorithm_settings_layout():
