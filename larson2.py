@@ -11,13 +11,13 @@ import genetic as gen
 import genetic_overtake as gen_o
 from plotly.colors import n_colors
 import dash
+import os
 import numpy as np
 
 # Initialize the app
 app = Dash(__name__, external_stylesheets=[
            dbc.themes.BOOTSTRAP], suppress_callback_exceptions=True)
 app.title = "MS Tools"
-
 
 
 ## Define styles for tables and buttons
@@ -145,7 +145,7 @@ sidebar = html.Div(
                 dbc.NavLink("File Input", href="/file-input", active="exact", style={
                             "color": "#FFF"}, n_clicks=0, id="file-input"),  # Change the color here
                 dbc.NavLink("Algorithm Settings", href="/algorithm-settings",
-                            active="exact", style={"color": "#FFF"}),
+                            active="exact", style={"color": "#FFF"},  n_clicks=0, id="alg-settings"),
                 dbc.NavLink("Graphs Section", href="/graphs",
                             active="exact", style={"color": "#FFF"}),
             ],
@@ -302,6 +302,8 @@ def file_input_layout():
               Input('enter-data-btn', 'n_clicks'),
               prevent_initial_call=True)
 def enter_data(n_clicks):
+    app.layout.df = pd.DataFrame(0, index=range(5), columns=titles)
+    app.layout.df['Job ID'] = [i+1 for i in range(5)] 
     return html.Div([html.Div(
                     dbc.Button(
                         "Submit Data",
@@ -468,6 +470,12 @@ def add_row(n_clicks, rows, columns):
 
     return rows
 
+@app.callback(Output('placeholder', 'children'),
+              Input('submit-data-btn', 'n_clicks'),)
+def reset_schedule(n_clicks):
+    app.layout.schedule_df = None
+    return html.Div("")
+
 
 def algorithm_settings_layout():
     algorithm_description = dbc.Col(
@@ -516,8 +524,6 @@ def algorithm_settings_layout():
             labelClassName="checklist-item-unselected",
             style={"textAlign" : "center"}
         )
-
-
 
     return html.Div(
         [
@@ -608,6 +614,28 @@ def algorithm_settings_layout():
             dbc.Row([dbc.Col(html.Div("", id='results-table') ,width =12)])
         ]
     )
+
+
+
+@app.callback(Output("btn-algorithm-output", "style"),
+             Output("show-vis-btn", "style"),
+             Output("results-table", "children"), 
+             Input("alg-settings", "n_clicks"),
+            )
+def restore_algorithm_settings(n_clicks):
+    sched_df = getattr(app.layout, 'schedule_df', None)
+    if sched_df is not None:
+        schedule_table =  dash_table.DataTable(
+            id="schedule-table",
+            columns=[{"name": col, "id": col, "deletable": False}
+                     for col in app.layout.schedule_df.columns],
+            data=app.layout.schedule_df.to_dict("records"),
+            # sort_action="native",  # Enables sorting by clicking column headers
+            **table_layout
+        )
+        return button_style1["style"], button_style1["style"], schedule_table
+    return {"display": "none"}, {"display": "none"}, html.Div("")
+
 
 
 @app.callback(Output('parameters', 'children'),
@@ -704,9 +732,9 @@ def enter_max_runtime_value(n_clicks, max_runtime, pop_size):
 
 @app.callback(
     Output('param-2', 'children', allow_duplicate=True),
-    Output('btn-algorithm-output', 'style'),
-    Output('show-vis-btn', 'style'),
-    Output('results-table', 'children'),
+    Output('btn-algorithm-output', 'style', allow_duplicate=True),
+    Output('show-vis-btn', 'style', allow_duplicate=True),
+    Output('results-table', 'children',allow_duplicate=True),
     Input('run-btn', 'n_clicks'),
     State('max-runtime', 'value'),
     State('population-size', 'value'),
@@ -1078,5 +1106,10 @@ def toggle_sidebar(n_clicks, current_state):
 
 
 # Run the app
+local = False
 if __name__ == "__main__":
-    app.run_server(debug=True)
+    if local:
+        app.run_server(debug=False)
+    else:  
+        port = int(os.environ.get("PORT", 10000))  # Render assigns a PORT dynamically
+        app.run(host="0.0.0.0", port=port, debug=False)
