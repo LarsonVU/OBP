@@ -30,11 +30,11 @@ def runAlgorithmGen(data, npop = 10, gens = 100):
     start_time = time.time()
 
     # Read the data from the dataframe
-    job_ids = np.array(data.job_id)
-    release_dates = np.array(data.release_date)
-    due_dates = np.array(data.due_date)
-    weights = np.array(data.weight)
-    processing_times = np.array(data.iloc[:, 4:])
+    job_ids = np.array(data.job_id, dtype = np.float32)
+    release_dates = np.array(data.release_date, dtype = np.float32)
+    due_dates = np.array(data.due_date, dtype = np.float32)
+    weights = np.array(data.weight, dtype = np.float32)
+    processing_times = np.array(data.iloc[:, 4:], dtype = np.float32)
 
     # Get the number of jobs and number of machines
     num_jobs = len(job_ids)
