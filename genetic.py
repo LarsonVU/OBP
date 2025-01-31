@@ -299,7 +299,7 @@ def getProbabilitites(scores):
     return probs
 
 if __name__ == "__main__":
-    data = readInput('data/job_data3.xlsx')
+    data = readInput('data/overtake_example.xlsx')
 
     start = time.time()
     df, min_score, exact_time, best_scores, best_schedule = runAlgorithmGen(data, npop = 10, gens = 1000)
