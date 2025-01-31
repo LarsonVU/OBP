@@ -42,10 +42,10 @@ def runAlgorithmGenO(data, npop = 10, gens = 100):
 
     # Read the data from the dataframe
     job_ids = np.array(data.job_id)
-    release_dates = np.array(data.release_date)
-    due_dates = np.array(data.due_date)
-    weights = np.array(data.weight)
-    processing_times = np.array(data.iloc[:, 4:])
+    release_dates = np.array(data.release_date, dtype = np.float32)
+    due_dates = np.array(data.due_date, dtype = np.float32)
+    weights = np.array(data.weight, dtype = np.float32)
+    processing_times = np.array(data.iloc[:, 4:], dtype = np.float32)
 
     # Get the number of jobs and number of machines
     num_jobs = len(job_ids)
@@ -141,7 +141,6 @@ def scheduleToDf(schedule, machines, release_dates, processing_times):
     completion_times = np.zeros_like(processing_times, dtype=int)
     current_time = 0
 
-
     # Get the completion times of all jobs on the first machine
     for job in schedule[0]:
         job = int(job)
@@ -194,7 +193,7 @@ def calculateScore(schedule, machines, release_dates, due_dates, weights, proces
     '''
     
     # Define variables
-    completion_times = np.zeros_like(processing_times)
+    completion_times = np.zeros_like(processing_times, dtype=np.float32)
     current_time = 0
 
     # Get the completion times of all jobs on the first machine
@@ -203,7 +202,7 @@ def calculateScore(schedule, machines, release_dates, due_dates, weights, proces
 
         if release_dates[job - 1] > current_time:
             current_time = release_dates[job - 1]
-
+        
         completion_times[job - 1, 0] = current_time + processing_times[job - 1, 0]
         current_time = completion_times[job - 1, 0]
 
@@ -326,6 +325,8 @@ def getProbabilitites(scores):
     - probs -> the probabilities that each of the schedules is chosen
     '''
 
+    scores = np.array(scores, dtype = np.float64)
+
     # Get the worst score
     worst_score = np.max(scores)
 
@@ -333,15 +334,18 @@ def getProbabilitites(scores):
     denominator = np.sum((worst_score - scores)**2)
 
     # Calculate the probabilities
-    probs = (worst_score - scores)**2 / denominator
+    if denominator != 0:
+        probs = (worst_score - scores)**2 / denominator
+    else:
+        probs = np.ones_like(scores) / np.shape(scores)
 
     return probs
 
 if __name__ == "__main__":
-    data = readInput('data/overtake_example.xlsx')
+    data = readInput('../OBP/Test2.xlsx')
 
     start = time.time()
-    df, min_score, exact_time, best_scores, best_schedule = runAlgorithmGenO(data, npop = 10, gens = 1000)
+    df, min_score, exact_time, best_scores, best_schedule = runAlgorithmGenO(data, npop = 10, gens = 10)
     end = time.time()
 
     print('Schedule:\n', best_schedule)
