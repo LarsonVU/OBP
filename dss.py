@@ -929,10 +929,10 @@ def create_gannt_chart(schedule_df, highlight_job_id=None):
 
     Input:
     - schedule_df: Dataframe containing a schedule of starting times and completion times
-    - A highlighted job which greys out others
+    - highlight_job_id: A highlighted job which greys out others
 
     Output:
-    - A gannt chart with possibly highlighted job
+    -fig: A gannt chart with possibly highlighted job
     '''
     fig = go.Figure()
 
@@ -987,6 +987,17 @@ def create_gannt_chart(schedule_df, highlight_job_id=None):
 
 
 def create_secondary_gantt_chart(schedule_df, due_dates, highlight_job_id=None):
+    '''
+    This function creates a schedule chart per job
+
+    Input:
+    - schedule_df: Dataframe containing a schedule of starting times and completion times
+    - due_dates: the due dates per job
+    - highlight_job_id: A highlighted job which greys out others
+
+    Output:
+    -fig: A gannt chart with possibly highlighted job, and due dates
+    '''
     fig = go.Figure()
 
     machines = int((len(schedule_df.columns) - 1) / 2)
@@ -1063,6 +1074,17 @@ def create_secondary_gantt_chart(schedule_df, due_dates, highlight_job_id=None):
 
 
 def create_runtime_and_score_display(runtime, score):
+    '''
+    This function creates a cards to display the runtime and scores
+
+    Input:
+    - runtime: float containing runtime
+    - score: float containing score
+
+    Output:
+    -runtime_card: dashboard component containing the runtime
+    -score_card: dashboard component containing the score 
+    '''
     runtime_card = dbc.Card(
         dbc.CardBody(
             [
@@ -1088,7 +1110,14 @@ def create_runtime_and_score_display(runtime, score):
 
 # Graphs Section Layout
 def graphs_layout():
+    '''
+    This function creates the layout for the graphs page.
 
+    Input:
+
+    Output:
+    - Page layout for the graphs section
+    '''
     schedule_data = getattr(app.layout, 'schedule_df', None)
     if schedule_data is not None:
 
@@ -1179,14 +1208,20 @@ def graphs_layout():
     Input('gant_chart', 'clickData')  # Listen for clicks
 )
 def update_chart(click_data):
+    '''
+    This function updates the gannt chart based on clickdata
+
+    Input:
+    -click_data: where clicks are placed
+
+    Output:
+    -Regular or Highlighted gannt chart
+    '''
     schedule_df = getattr(app.layout, 'schedule_df', None)
 
     if click_data is None:
         return create_gannt_chart(schedule_df)  # No click, return the default chart
 
-    # Get the Job ID from the clicked bar
-    # clicked_job_id = click_data['points'][0]['text']   Assuming 'text' contains the Job ID
-    # print(click_data)
     return create_gannt_chart(schedule_df, highlight_job_id=int(click_data['points'][0]['customdata'])) 
 
 
@@ -1196,6 +1231,15 @@ def update_chart(click_data):
     prevent_initial_call=True
 )
 def update_graphs(selected_page):
+    '''
+    This function chooses the graph of a selection of jobs based on the pagination
+
+    Input:
+    - selected_page: integer containing the selected page
+
+    Output:
+    - The correct gannt chart based on selected_page
+    '''
     start_idx = (selected_page - 1) * app.layout.jobs_per_page
     end_idx = start_idx + app.layout.jobs_per_page
     page_jobs = app.layout.schedule_df.iloc[start_idx:end_idx]
@@ -1215,6 +1259,16 @@ def update_graphs(selected_page):
     prevent_initial_call=True  # Avoid triggering the callback initially
 )
 def toggle_sidebar(n_clicks, current_state):
+    '''
+    This function updates the sidebar
+
+    Input:
+    - n_clicks: checks whether sidebar is clicked
+    - current_state: str showing whether the sidebar was open or closed
+
+    Output:
+    - sidebar with new state
+    '''
     if current_state == "open":
         # Close the sidebar
         return (
@@ -1250,10 +1304,6 @@ def toggle_sidebar(n_clicks, current_state):
 
 
 # Run the app
-local = True
 if __name__ == "__main__":
-    if local:
-        app.run_server(debug=False)
-    else:  
-        port = int(os.environ.get("PORT", 10000))  # Render assigns a PORT dynamically
-        app.run(host="0.0.0.0", port=port, debug=False)
+    port = int(os.environ.get("PORT", 10000))  # Render assigns a PORT dynamically
+    app.run(host="0.0.0.0", port=port, debug=False)
