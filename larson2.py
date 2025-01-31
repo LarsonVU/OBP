@@ -87,21 +87,6 @@ button_style2 = {"style" : {"display": "block",  # Initially hidden
                   "transition": "background-color 0.3s ease", }}  # Smooth hover transition  # Make the button visible}
 
 
-unselected_button_style1 = {
-    "style": {
-        "margin": "20px 0",
-        "backgroundColor": "#f0f0f0",  # Light background for unselected state
-        "color": "#333333",  # Darker text for visibility
-        "border": "1px solid #dcdcdc",  # Light border
-        "padding": "10px 20px",
-        "borderRadius": "5px",
-        "fontSize": "16px",
-        "fontWeight": "normal",  # Normal weight for unselected
-        "fontFamily": "montserrat, sans-serif",
-        "cursor": "pointer",
-        "transition": "background-color 0.3s ease, color 0.3s ease",  # Smooth transitions
-    }} 
-
 
 
 header = html.Div(
@@ -191,6 +176,8 @@ app.layout = html.Div(
         content
     ]
 )
+
+#Initialize global variables
 app.layout.total_pages = 1
 app.layout.jobs_per_page = 10
 titles = ['Job ID', 'Release Date',
@@ -206,6 +193,15 @@ app.layout.df['Job ID'] = [i+1 for i in range(5)]
     Input("url", "pathname"),
 )
 def display_page(pathname):
+    '''
+    This function reads a URL path and returns the correct page layout.
+
+    Input:
+    - pathname: The URL path of the page
+
+    Output:
+    - Refer to the correct page layout
+    '''
     if pathname == "/file-input":
         return file_input_layout()
     elif pathname == "/algorithm-settings":
@@ -218,6 +214,13 @@ def display_page(pathname):
 
 # File Input Section Layout (Updated with provided code)
 def file_input_layout():
+    '''
+    This function creates the layout for the file input page.
+
+    Output:
+    - Page layout for the file input section
+    '''
+
     return html.Div(
         [
             html.H3("Upload Data", style={"textAlign": "center"}, className="custom-h3 mb-3"),
@@ -302,6 +305,15 @@ def file_input_layout():
               Input('enter-data-btn', 'n_clicks'),
               prevent_initial_call=True)
 def enter_data(n_clicks):
+    '''
+    This function checks whether the user wants to enter data manually.
+
+    Input:
+    - clicks on the "Enter data manually" button
+
+    Output:
+    - Creates a table for manual data entry
+    '''
     app.layout.df = pd.DataFrame(0, index=range(5), columns=titles)
     app.layout.df['Job ID'] = [i+1 for i in range(5)] 
     return html.Div([html.Div(
@@ -330,6 +342,14 @@ def enter_data(n_clicks):
     Input("file-input", "n_clicks"),
 )
 def restore_data(n_clicks):
+    '''
+    This function restores the data on the input page, when returning from another page.
+    Input:
+    - n_clicks: number of times the "File Input" button is clicked
+
+    Output:
+    - Returns the data table and makes the buttons visible after returning from the file input page 
+    '''
     if n_clicks > 0 and app.layout.df is not None:
         df = app.layout.df
         return html.Div([html.Div(
@@ -377,6 +397,15 @@ def restore_data(n_clicks):
     prevent_initial_call=True
 )
 def display_table(contents, filename):
+    '''
+    This function displays the table created from file input
+
+    Input:
+    - the contents of the uploaded file, and the filename
+
+    Output:
+    - Display the table with the uploaded data
+    '''
     if contents is None:
         # If no file is uploaded, keep button hidden and display placeholder text
         return html.Div(
@@ -439,6 +468,16 @@ def display_table(contents, filename):
     State('sortable-table', 'columns'),
     prevent_initial_call=True)
 def update_input_data(rows, columns):
+    '''
+    This function updates the input data table to a valid format
+
+    Input:
+    - rows of the data table
+    - column names of the data table
+
+    Output:
+    - Updated table to correct the data format
+    '''
     default_value = 0  # Define the default value to replace faulty data
     
     for i, row in enumerate(rows):
@@ -453,7 +492,7 @@ def update_input_data(rows, columns):
                 
     app.layout.df = pd.DataFrame(
         rows, columns=[col['name'] for col in columns]).astype(int)
-    return rows # app.layout.df.iloc[-1]['Job ID']
+    return rows 
 
 
 @app.callback(Output('sortable-table', 'data', allow_duplicate=True),
@@ -463,6 +502,18 @@ def update_input_data(rows, columns):
               prevent_initial_call=True
               )
 def add_row(n_clicks, rows, columns):
+    '''
+    This function adds a new row to the input data table
+
+    Input:
+    - n_clicks: number of times the "Add Row" button is clicked
+    - rows: data in the table
+    - columns: column names of the table
+
+    Output:
+    - Updated table with a new row
+    '''
+
     if rows is None:
         rows = []
     new_row = {col['id']: 0 for col in columns}  # Create an empty row
@@ -473,11 +524,28 @@ def add_row(n_clicks, rows, columns):
 @app.callback(Output('placeholder', 'children'),
               Input('submit-data-btn', 'n_clicks'),)
 def reset_schedule(n_clicks):
+    '''
+    This function resets previous results when new data is entered
+
+    Input:
+    - n_clicks: number of times the "Submit Data" button is clicked
+
+    Output:
+    - Placeholder text (the previous schedule is removed)
+    '''
     app.layout.schedule_df = None
     return html.Div("")
 
 
 def algorithm_settings_layout():
+    '''
+    This function creates the layout for the algorithm settings page.
+
+    Input:
+
+    Output:
+    - Page layout for the algorithm settings section
+    '''
     algorithm_description = dbc.Col(
     dbc.Card(
         [
@@ -623,6 +691,15 @@ def algorithm_settings_layout():
              Input("alg-settings", "n_clicks"),
             )
 def restore_algorithm_settings(n_clicks):
+    '''
+    This function restores the algorithm settings when returning from another page.
+
+    Input:
+    - n_clicks: number of times the "Algorithm Settings" button is clicked
+
+    Output:
+    - Restores the algorithm settings and results if previously run
+    '''
     sched_df = getattr(app.layout, 'schedule_df', None)
     if sched_df is not None:
         schedule_table =  dash_table.DataTable(
@@ -643,6 +720,17 @@ def restore_algorithm_settings(n_clicks):
               Input('algorithm-type', 'value'),
               prevent_initial_call=True)
 def update_parameters(algorithm_type):
+    '''
+    This function updates the parameters and algorithm description based on the selected algorithm
+
+    Input:
+    - algorithm_type: the selected algorithm type
+
+    Output:
+    - Updated parameters
+    - Algorithm description
+    '''
+
     ILP_description = "The integer linear program (ILP) will find the optimal solution given sufficient time. \
                     However, finding a reasonable solution might take more time, especially on larger instances. Running this algorithm on instances with more than 500 jobs is not recommended. \
                       One can determine the maximum run time in seconds by filling in the parameter."
@@ -706,12 +794,21 @@ def update_parameters(algorithm_type):
               Input('run-btn', 'n_clicks'),
               prevent_initial_call=True)
 def is_algorithm_running(n_clicks):
+    '''
+    This function shows that the algorithm is running
+
+    Input:
+    - n_clicks: number of times the "Run Algorithm" button is clicked
+
+    Output:
+    - A spinner and "Running" text
+    '''
     return html.Div(
             [
                 dbc.Spinner(size="sm", color="--knoppen-blauw"),
                 " Running",
             ],
-        )#f"Running"
+        )
 
 
 @app.callback(
@@ -723,6 +820,18 @@ def is_algorithm_running(n_clicks):
     prevent_initial_call=True
 )
 def enter_max_runtime_value(n_clicks, max_runtime, pop_size):
+    '''
+    This function fills in the default values for the parameters if the user does not enter any values
+
+    Input:
+    - n_clicks: number of times the "Run Algorithm" button is clicked
+    - max_runtime: the maximum runtime entered by the user
+    - pop_size: the population size entered by the user
+
+    Output:
+    - Default value for the maximum runtime
+    - Default value for the population size
+    '''
     if max_runtime is None:
         max_runtime = 100
     if pop_size is None:
@@ -743,6 +852,22 @@ def enter_max_runtime_value(n_clicks, max_runtime, pop_size):
     prevent_initial_call=True
 )
 def run_specified_algorithm(n_clicks, max_runtime, pop_size, algorithm_type, overtake):
+    '''
+    This function runs the algorithm with the specified parameters by the users
+
+    Input:
+    - n_clicks: number of times the "Run Algorithm" button is clicked
+    - max_runtime: the maximum runtime entered by the user
+    - pop_size: the population size entered by the user
+    - algorithm_type: the selected algorithm type
+    - overtake: whether overtaking is allowed
+
+    Output:
+    - Algorithm status as finished
+    - Display button "download solution"
+    - Display button "show visualizations"
+    - Schedule table
+    '''
     data = app.layout.df.copy()
     columns = ['job_id', 'release_date', 'due_date', 'weight'] + \
         [f"st_{i+1}" for i in range(len(data.columns)-4)]
