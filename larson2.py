@@ -1109,7 +1109,7 @@ def toggle_sidebar(n_clicks, current_state):
 local = False
 if __name__ == "__main__":
     if local:
-        app.run_server(debug=True)
+        app.run_server(debug=False)
     else:  
         port = int(os.environ.get("PORT", 10000))  # Render assigns a PORT dynamically
-        app.run(host="0.0.0.0", port=port, debug=True)
+        app.run(host="0.0.0.0", port=port, debug=False)
