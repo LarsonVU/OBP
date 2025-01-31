@@ -11,12 +11,13 @@ import genetic as gen
 import genetic_overtake as gen_o
 from plotly.colors import n_colors
 import dash
+import os
+import numpy as np
 
 # Initialize the app
 app = Dash(__name__, external_stylesheets=[
            dbc.themes.BOOTSTRAP], suppress_callback_exceptions=True)
 app.title = "MS Tools"
-
 
 
 ## Define styles for tables and buttons
@@ -144,7 +145,7 @@ sidebar = html.Div(
                 dbc.NavLink("File Input", href="/file-input", active="exact", style={
                             "color": "#FFF"}, n_clicks=0, id="file-input"),  # Change the color here
                 dbc.NavLink("Algorithm Settings", href="/algorithm-settings",
-                            active="exact", style={"color": "#FFF"}),
+                            active="exact", style={"color": "#FFF"},  n_clicks=0, id="alg-settings"),
                 dbc.NavLink("Graphs Section", href="/graphs",
                             active="exact", style={"color": "#FFF"}),
             ],
@@ -192,6 +193,10 @@ app.layout = html.Div(
 )
 app.layout.total_pages = 1
 app.layout.jobs_per_page = 10
+titles = ['Job ID', 'Release Date',
+                      'Due Date', 'Weight'] + [f"Process time {i+1}" for i in range(3)]
+app.layout.df = pd.DataFrame(0, index=range(5), columns=titles)
+app.layout.df['Job ID'] = [i+1 for i in range(5)] 
 
 # Callbacks to handle page navigation
 
@@ -241,6 +246,24 @@ def file_input_layout():
 
             html.Div(id='output-data-upload'),
             html.Button(
+                            "Enter data manually", 
+                            id='enter-data-btn',
+                            n_clicks=0,
+                            style={  # Add custom style
+                                "margin": "20px auto",
+                                "backgroundColor": "var(--knoppen-blauw)",  # Button background color
+                                "color": "#FFFFFF",  # Button text color
+                                "border": "none",  # No border
+                                "padding": "10px 20px",  # Padding inside the button
+                                "borderRadius": "5px",  # Rounded corners
+                                "fontSize": "16px",  # Font size
+                                "fontWeight": "bold",  # Bold text
+                                "fontFamily": "montserrat, sans-serif",  # Font family
+                                "cursor": "pointer",  # Pointer cursor on hover
+                                "transition": "background-color 0.3s ease",  # Smooth hover transition
+                            }
+                        ),
+            html.Button(
                 "Add Row",
                 id="add-row-btn",
                 n_clicks=0,
@@ -273,9 +296,37 @@ def file_input_layout():
     )
 
 
+@app.callback(Output('output-data-upload', 'children',  allow_duplicate=True),
+              Output('add-row-btn', 'style', allow_duplicate=True),
+              Output('enter-data-btn', 'style', allow_duplicate=True),
+              Input('enter-data-btn', 'n_clicks'),
+              prevent_initial_call=True)
+def enter_data(n_clicks):
+    app.layout.df = pd.DataFrame(0, index=range(5), columns=titles)
+    app.layout.df['Job ID'] = [i+1 for i in range(5)] 
+    return html.Div([html.Div(
+                    dbc.Button(
+                        "Submit Data",
+                        id="submit-data-btn",
+                        href="/algorithm-settings",  # Link to the algorithm settings page
+                        style={"textAlign": "center",} | button_style1["style"]
+                    ), style={"display": "flex", "justifyContent": "center", "alignItems": "center"},),
+            dash_table.DataTable(
+                id="sortable-table",
+                columns=[{"name": col, "id": col} for col in app.layout.df.columns],
+                data=app.layout.df.to_dict("records"),
+                sort_action="native",
+                editable=True,
+                row_deletable=True,
+                **table_layout
+            )
+        ]), button_style2["style"], {"display": "none"}
+
+
 @app.callback(
     Output('output-data-upload', 'children'),
     Output('add-row-btn', 'style'),
+    Output('enter-data-btn', 'style'),
     Input("file-input", "n_clicks"),
 )
 def restore_data(n_clicks):
@@ -297,8 +348,20 @@ def restore_data(n_clicks):
                 row_deletable=True,
                 **table_layout
             )
-        ]), button_style2["style"]
-    return html.Div("", style={'textAlign': 'center', 'font-family': 'Roboto'}), {"display": "none"}
+        ]), button_style2["style"],  {"display": "none"}
+    return html.Div("", style={'textAlign': 'center', 'font-family': 'Roboto'}), {"display": "none"}, {  # Add custom style
+                                "margin": "20px auto",
+                                "backgroundColor": "var(--knoppen-blauw)",  # Button background color
+                                "color": "#FFFFFF",  # Button text color
+                                "border": "none",  # No border
+                                "padding": "10px 20px",  # Padding inside the button
+                                "borderRadius": "5px",  # Rounded corners
+                                "fontSize": "16px",  # Font size
+                                "fontWeight": "bold",  # Bold text
+                                "fontFamily": "montserrat, sans-serif",  # Font family
+                                "cursor": "pointer",  # Pointer cursor on hover
+                                "transition": "background-color 0.3s ease",  # Smooth hover transition
+                            }
 
 
 # Callback to parse and display the uploaded file
@@ -306,7 +369,8 @@ def restore_data(n_clicks):
     [
         Output('output-data-upload', 'children', allow_duplicate=True),
         # Add output to modify button style
-        Output('add-row-btn', 'style', allow_duplicate=True)
+        Output('add-row-btn', 'style', allow_duplicate=True),
+        Output('enter-data-btn', 'style', allow_duplicate=True)
     ],
     Input('upload-data', 'contents'),
     State('upload-data', 'filename'),
@@ -362,11 +426,11 @@ def display_table(contents, filename):
                     row_deletable=True,
                     **table_layout
                 ),
-            ]),  button_style2["style"]
+            ]),  button_style2["style"], {"display": "none"}
         else:
-            return html.Div("Unsupported file type. Please upload an Excel file."), {"display": "none"}
+            return html.Div("Unsupported file type. Please upload an Excel file."), {"display": "none"}, {"display": "block"}
     except Exception as e:
-        return html.Div(f"There was an error processing the file: {str(e)}"), {"display": "none"}
+        return html.Div(f"There was an error processing the file: {str(e)}"), {"display": "none"}, {"display": "block"}
 
 
 @app.callback(
@@ -406,6 +470,12 @@ def add_row(n_clicks, rows, columns):
 
     return rows
 
+@app.callback(Output('placeholder', 'children'),
+              Input('submit-data-btn', 'n_clicks'),)
+def reset_schedule(n_clicks):
+    app.layout.schedule_df = None
+    return html.Div("")
+
 
 def algorithm_settings_layout():
     algorithm_description = dbc.Col(
@@ -417,10 +487,11 @@ def algorithm_settings_layout():
             dbc.CardBody(
                 html.P(
                     "The integer linear program (ILP) will find the optimal solution given sufficient time. "
-                    "However, finding a reasonable solution takes more time. One can determine the maximum run time in seconds by filling in the parameter.",
+                    "However, finding a reasonable solution might take more time, especially on larger instances. Running this algorithm on instances with more than 500 jobs is not recommended. \
+                      One can determine the maximum run time in seconds by filling in the parameter.",
                     className="mb-0", id="algorithm-description"
                 ) ,             style={
-        "height": "120px",  # Fixed height
+        "height": "115px",  # Fixed height
         "overflow": "hidden",  # Hide overflowing text
         "textOverflow": "ellipsis",  # Add ellipsis if text overflows
         }
@@ -447,13 +518,12 @@ def algorithm_settings_layout():
     allow_overtake_check = dcc.Checklist(
             id="overtake-checklist",
             options=[
-                {"label": "Disable Overtake", "value": "disable"}
+                {"label": " Disable Overtake", "value": "disable"}
             ],
             inputClassName="checklist-item-unselected",
             labelClassName="checklist-item-unselected",
+            style={"textAlign" : "center"}
         )
-
-
 
     return html.Div(
         [
@@ -546,15 +616,40 @@ def algorithm_settings_layout():
     )
 
 
+
+@app.callback(Output("btn-algorithm-output", "style"),
+             Output("show-vis-btn", "style"),
+             Output("results-table", "children"), 
+             Input("alg-settings", "n_clicks"),
+            )
+def restore_algorithm_settings(n_clicks):
+    sched_df = getattr(app.layout, 'schedule_df', None)
+    if sched_df is not None:
+        schedule_table =  dash_table.DataTable(
+            id="schedule-table",
+            columns=[{"name": col, "id": col, "deletable": False}
+                     for col in app.layout.schedule_df.columns],
+            data=app.layout.schedule_df.to_dict("records"),
+            # sort_action="native",  # Enables sorting by clicking column headers
+            **table_layout
+        )
+        return button_style1["style"], button_style1["style"], schedule_table
+    return {"display": "none"}, {"display": "none"}, html.Div("")
+
+
+
 @app.callback(Output('parameters', 'children'),
               Output('algorithm-description', 'children'),
               Input('algorithm-type', 'value'),
               prevent_initial_call=True)
 def update_parameters(algorithm_type):
-    ILP_description = "The integer linear program (ILP) will find the optimal solution given sufficient time. " \
-                        "However, finding a reasonable solution takes more time. One can enter the maximum run time in seconds below. "
-    Genetic_description = "The genetic algorithm will find a reasonable solution given sufficient time. " \
-                            "However, finding the optimal solution might take infinite generations. One can enter the maximum number of generations and population size per generation below. Increasing these values will increase the runtime."
+    ILP_description = "The integer linear program (ILP) will find the optimal solution given sufficient time. \
+                    However, finding a reasonable solution might take more time, especially on larger instances. Running this algorithm on instances with more than 500 jobs is not recommended. \
+                      One can determine the maximum run time in seconds by filling in the parameter."
+    Genetic_description = "The genetic algorithm will find a reasonable solution given a sufficient number of generations and population size. " \
+                            "However, finding the optimal solution might take infinite generations. Additionally, the solution that the genetic \
+                            algorithm gives is inherently random. One can enter the maximum number of generations and population size per generation below.\
+                            Increasing these values will increase the runtime."
 
     ILP_parameters = dbc.Col(dbc.Row(
                         [
@@ -637,9 +732,9 @@ def enter_max_runtime_value(n_clicks, max_runtime, pop_size):
 
 @app.callback(
     Output('param-2', 'children', allow_duplicate=True),
-    Output('btn-algorithm-output', 'style'),
-    Output('show-vis-btn', 'style'),
-    Output('results-table', 'children'),
+    Output('btn-algorithm-output', 'style', allow_duplicate=True),
+    Output('show-vis-btn', 'style', allow_duplicate=True),
+    Output('results-table', 'children',allow_duplicate=True),
     Input('run-btn', 'n_clicks'),
     State('max-runtime', 'value'),
     State('population-size', 'value'),
@@ -782,9 +877,9 @@ def create_secondary_gantt_chart(schedule_df, due_dates, highlight_job_id=None):
             x=[due_dates.loc[index], due_dates.loc[index]],
             y=[row['Job ID'] - 0.4, row['Job ID'] + 0.4],
             mode="lines",
-            line=dict(color="#39FF14", width=3),
-            name=f"Due Date {int(row['Job ID'])}",
-            showlegend=(index == 0),  # Show legend only once
+            line=dict(color="#8B0000", width=6),
+            name=f"Due Dates",
+            showlegend=(index % 10 == 0),  # Show legend only once
             hoverinfo="text",
             hovertext=f"Due Date for Job {int(row['Job ID'])}: {due_dates.loc[index]}",
         ))
@@ -813,7 +908,10 @@ def create_secondary_gantt_chart(schedule_df, due_dates, highlight_job_id=None):
             dtick=1,
             fixedrange=True  # Enable zooming for detailed view
         ),
-        showlegend=False,
+        showlegend=True,
+        legend=dict(
+        itemclick=False,  # Disable click interactions
+        itemdoubleclick=False)  # Disable double-click interactions
     )
 
     return fig
@@ -1008,5 +1106,10 @@ def toggle_sidebar(n_clicks, current_state):
 
 
 # Run the app
+local = False
 if __name__ == "__main__":
-    app.run_server(debug=True)
+    if local:
+        app.run_server(debug=False)
+    else:  
+        port = int(os.environ.get("PORT", 10000))  # Render assigns a PORT dynamically
+        app.run(host="0.0.0.0", port=port, debug=False)
