@@ -28,10 +28,10 @@ def runAlgorithmGenO(data, npop = 10, gens = 100):
 
     # Read the data from the dataframe
     job_ids = np.array(data.job_id)
-    release_dates = np.array(data.release_date, dtype = np.float32)
-    due_dates = np.array(data.due_date, dtype = np.float32)
-    weights = np.array(data.weight, dtype = np.float32)
-    processing_times = np.array(data.iloc[:, 4:], dtype = np.float32)
+    release_dates = np.array(data.release_date)
+    due_dates = np.array(data.due_date)
+    weights = np.array(data.weight)
+    processing_times = np.array(data.iloc[:, 4:])
 
     # Get the number of jobs and number of machines
     num_jobs = len(job_ids)
@@ -220,6 +220,7 @@ def calculateScore(schedule, machines, release_dates, due_dates, weights, proces
     # Calculate the total weighted tardiness
     score = np.sum(tardiness)
 
+    # Print score dtype
     return score
 
 def generateRandomSchedules(num_jobs, num_machines, num_schedules):
@@ -350,7 +351,7 @@ def getProbabilitites(scores):
 if __name__ == "__main__":
 
     # Read the data
-    data = readInput('data/overtake_example.xlsx')
+    data = readInput('data/Test1.xlsx')
 
     # Run the algorithm
     df, min_score, exact_time, best_scores, best_schedule = runAlgorithmGenO(data, npop = 10, gens = 100)
@@ -360,3 +361,4 @@ if __name__ == "__main__":
     print('Score:', min_score)
     print('Runtime:', exact_time)
     print('List of scores:', best_scores)
+    print(min_score.dtype)
